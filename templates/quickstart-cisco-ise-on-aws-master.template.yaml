@@ -172,8 +172,8 @@ Parameters:
     Type: String
     Default: 'false'
     AllowedValues:
-      - false
-      - true
+      - 'false'
+      - 'true'
     ConstraintDescription: It can either be true or false
   ERSapi:
     Description: Do you wish to enable ERS?
@@ -723,10 +723,6 @@ Resources:
           Fn::GetAtt:
           - VPCStack
           - Outputs.PrivateSubnet1AID
-        ManagementSubnet2Id:
-          Fn::GetAtt:
-          - VPCStack
-          - Outputs.PrivateSubnet2AID
         TimeZone: !Ref TimeZone
         ISEInstanceType: !Ref ISEInstanceType
         EBSEncrypt: !Ref EBSEncrypt

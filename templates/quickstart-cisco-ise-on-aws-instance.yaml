@@ -26,8 +26,8 @@ Parameters:
     Type: String
     Default: 'false'
     AllowedValues:
-      - false
-      - true
+      - 'false'
+      - 'true'
     ConstraintDescription: It can either be true or false
   ERSapi:
     Description: Do you wish to enable ERS?

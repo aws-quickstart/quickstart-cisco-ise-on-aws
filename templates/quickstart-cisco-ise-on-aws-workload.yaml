@@ -11,7 +11,6 @@ Metadata:
           - Hostname
           - KeyPairName
           - ManagementSubnet1Id
-          - ManagementSubnet2Id
           - TimeZone
           - ISEInstanceType
           - EBSEncrypt
@@ -44,12 +43,10 @@ Metadata:
     ParameterLabels:
       KeyPairName:
         default: SSH key name
-      HostName:
+      Hostname:
         default: Host name
       ManagementSubnet1Id:
         default: Management Network 1
-      ManagementSubnet2Id:
-        default: Management Network 2
       TimeZone:
         default: Time Zone
       ISEInstanceType:
@@ -109,8 +106,8 @@ Parameters:
     Type: String
     Default: 'false'
     AllowedValues:
-      - false
-      - true
+      - 'false'
+      - 'true'
     ConstraintDescription: It can either be true or false
   ERSapi:
     Description: Do you wish to enable ERS?
@@ -148,10 +145,6 @@ Parameters:
     Type: 'AWS::EC2::Subnet::Id'
     Description: >-
       ID of the public subnet in Availability Zone 1 of your existing VPC (e.g., subnet-z0376dab).
-  ManagementSubnet2Id:
-    Type: 'AWS::EC2::Subnet::Id'
-    Description: >-
-      ID of the public subnet in Availability Zone 2 of your existing VPC (e.g., subnet-z0376dab).
   Hostname:
     Description: >-
       Enter the hostname. This field only supports alphanumeric characters and
@@ -710,6 +703,7 @@ Resources:
         PXGridCloud: !Ref PXGridCloud
         password: !Ref password
         VPCID: !Ref VPCID
+        Hostname: !Ref Hostname
 
 Outputs:
   VPCID:
