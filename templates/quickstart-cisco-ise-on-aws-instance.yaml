@@ -570,10 +570,10 @@ Mappings:
     sa-east-1:
       BYOL: ami-0feeceb6d1a0dd691
 Resources:
-  MSecurityGroup:
+  ISESecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: Enable HTTP, HTTPS and SSH to the Portal Server
+      GroupDescription: Enable HTTP, HTTPS and SSH to the ISE Server
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
@@ -588,73 +588,97 @@ Resources:
           ToPort: 22
           CidrIp: '0.0.0.0/0'
       VpcId: !Ref VPCID
-  IseEc2Instance:
-    Type: 'AWS::EC2::Instance'
+  IseLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
     Properties:
-      InstanceType: !Ref ISEInstanceType
-      KeyName: !Ref KeyPairName
-      NetworkInterfaces:
-        - DeviceIndex: '0'
-          SubnetId: !Ref PrivateSubnet1A
-          GroupSet:
-            - !Ref MSecurityGroup
-      ImageId: !FindInMap 
-        - CiscoISE31AMI
-        - !Ref 'AWS::Region'
-        - BYOL
-      BlockDeviceMappings:
+      LaunchTemplateName: !Sub ${AWS::StackName}-00_ISE_cluster_launch_template
+      LaunchTemplateData:
+        InstanceType: !Ref ISEInstanceType
+        KeyName: !Ref KeyPairName
+        ImageId: !FindInMap 
+          - CiscoISE31AMI
+          - !Ref 'AWS::Region'
+          - BYOL
+        BlockDeviceMappings:
         - DeviceName: /dev/sda1
           Ebs:
             VolumeType: gp2
             DeleteOnTermination: 'true'
             Encrypted: !Ref EBSEncrypt
             VolumeSize: !Ref StorageSize
+        SecurityGroupIds:
+          - !Ref ISESecurityGroup
+        TagSpecifications:
+          -
+            ResourceType: 'instance'
+            Tags:
+              - Key: "Name"
+                Value: "ISENode"
+        UserData: !Base64 
+          'Fn::Join':
+            - ''
+            - - hostname=
+              - !Ref Hostname
+              - |+
+
+              - dnsdomain=
+              - !Ref DNSDomain
+              - |+
+
+              - primarynameserver=169.254.169.253
+              - |+
+
+              - ntpserver=169.254.169.123
+              - |+
+
+              - username=admin
+              - |+
+
+              - password=
+              - !Ref password
+              - |+
+
+              - timezone=
+              - !Ref TimeZone
+              - |+
+
+              - ersapi=
+              - !Ref ERSapi
+              - |+
+
+              - openapi=
+              - !Ref OpenAPI
+              - |+
+
+              - pxGrid=
+              - !Ref PXGrid
+              - |+
+
+              - pxgrid_cloud=
+              - !Ref PXGridCloud
+              - |+
+      
+  ISENode1:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref IseLaunchTemplate
+        Version: !GetAtt 'IseLaunchTemplate.LatestVersionNumber'
+      SubnetId: !Ref PrivateSubnet1A
       Tags:
-        - Key: Role
-          Value: Test Instance
-      UserData: !Base64 
-        'Fn::Join':
-          - ''
-          - - hostname=
-            - !Ref Hostname
-            - |+
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-00_ISE_cluster_node1
 
-            - dnsdomain=
-            - !Ref DNSDomain
-            - |+
-
-            - primarynameserver=169.254.169.253
-            - |+
-
-            - ntpserver=169.254.169.123
-            - |+
-
-            - username=admin
-            - |+
-
-            - password=
-            - !Ref password
-            - |+
-
-            - timezone=
-            - !Ref TimeZone
-            - |+
-
-            - ersapi=
-            - !Ref ERSapi
-            - |+
-
-            - openapi=
-            - !Ref OpenAPI
-            - |+
-
-            - pxGrid=
-            - !Ref PXGrid
-            - |+
-
-            - pxgrid_cloud=
-            - !Ref PXGridCloud
-            - |+
+  ISENode2:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref IseLaunchTemplate
+        Version: !GetAtt 'IseLaunchTemplate.LatestVersionNumber'
+      SubnetId: !Ref PrivateSubnet1B
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-00_ISE_cluster_node2
 
   #load balancer resources
   PSNNLB:
@@ -666,6 +690,12 @@ Resources:
       Subnets:
         - !Ref PrivateSubnet1A
         - !Ref PrivateSubnet1B
+      LoadBalancerAttributes:
+        - Key: load_balancing.cross_zone.enabled
+          Value: "true"
+      Tags:
+      - Key: Name
+        Value: !Sub ${VPCID}-Nlb
   PSNTargetGroupforRADIUS1812:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -673,11 +703,13 @@ Resources:
       HealthCheckProtocol: TCP
       Port: 1812
       Protocol: UDP
-      TargetType: instance
+      Targets:
+      - Id: !Ref ISENode1
+      - Id: !Ref ISENode2
       VpcId: !Ref VPCID
       Tags:
         - Key: "Name"
-          Value: !Ref IseEc2Instance
+          Value: Radius1812
   PSNTargetGroupforRADIUS1813:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -685,11 +717,13 @@ Resources:
       HealthCheckProtocol: TCP
       Port: 1813
       Protocol: UDP
-      TargetType: instance
+      Targets:
+      - Id: !Ref ISENode1
+      - Id: !Ref ISENode2
       VpcId: !Ref VPCID
       Tags:
         - Key: "Name"
-          Value: !Ref IseEc2Instance
+          Value: Radius1813
   PSNTargetGroupforTACACS49:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -697,11 +731,13 @@ Resources:
       HealthCheckProtocol: TCP
       Port: 49
       Protocol: TCP
-      TargetType: instance
+      Targets:
+      - Id: !Ref ISENode1
+      - Id: !Ref ISENode2
       VpcId: !Ref VPCID
       Tags:
         - Key: "Name"
-          Value: !Ref IseEc2Instance
+          Value: Tacacs49
   PSNListener1:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
@@ -729,8 +765,7 @@ Resources:
       LoadBalancerArn: !Ref PSNNLB
       Port: 49
       Protocol: TCP
-  
-  #Failover lambda resources
+  #lambda boilerplate
   CopyLambdaStack:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -799,11 +834,9 @@ Resources:
         S3Bucket: !GetAtt 'CopyLambdaStack.Outputs.LambdaZipsBucket'
         S3Key: !Sub "${QSS3KeyPrefix}functions/packages/lambda.zip"
       MemorySize: 3008
-  #configuration lambda
   #Route53 configuration
-  #Backup to S3 configuration
   #cloudwatch alarms
-  Ec2InstanceAutorecoverAlarm:
+  ISENode1AutorecoverAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmActions:
@@ -813,23 +846,52 @@ Resources:
       MetricName: StatusCheckFailed_System
       Dimensions:
         - Name: InstanceId
-          Value: !Ref IseEc2Instance
+          Value: !Ref ISENode1
+      EvaluationPeriods: 2
+      Period: 60
+      Statistic: Minimum
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 0
+  ISENode2AutorecoverAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Sub arn:aws:automate:${AWS::Region}:ec2:recover
+      AlarmDescription: Recover instance if its status checks fail.
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed_System
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref ISENode2
       EvaluationPeriods: 2
       Period: 60
       Statistic: Minimum
       ComparisonOperator: GreaterThanThreshold
       Threshold: 0
 Outputs:
-  InstanceID:
-    Description: 'InstanceID of the newly created ISE EC2 instance '
-    Value: !Ref IseEc2Instance
-  PrivateDnsName:
-    Description: Private DNSName of the newly created EC2 instance
+  ISENode1ID:
+    Description: 'InstanceID of the newly created ISE Node 1 '
+    Value: !Ref ISENode1
+  ISENode1PrivateDnsName:
+    Description: Private DNSName of the newly created ISE Node 1
     Value: !GetAtt 
-      - IseEc2Instance
+      - ISENode1
       - PrivateDnsName
-  PrivateIp:
-    Description: Private IP address of the newly created EC2 instance
+  ISENode1PrivateIp:
+    Description: Private IP address of the newly created ISE Node 1
     Value: !GetAtt 
-      - IseEc2Instance
+      - ISENode1
+      - PrivateIp
+  ISENode2ID:
+    Description: 'InstanceID of the newly created ISE Node 2 '
+    Value: !Ref ISENode2
+  ISENode2PrivateDnsName:
+    Description: Private DNSName of the newly created ISE Node 2
+    Value: !GetAtt 
+      - ISENode2
+      - PrivateDnsName
+  ISENode2PrivateIp:
+    Description: Private IP address of the newly created ISE Node 2
+    Value: !GetAtt 
+      - ISENode2
       - PrivateIp
