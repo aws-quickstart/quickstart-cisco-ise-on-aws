@@ -61,10 +61,14 @@ Parameters:
       - 'yes'
       - 'no'
     ConstraintDescription: It can either be yes or no
-  SubnetId:
+  PrivateSubnet1A:
     Type: 'AWS::EC2::Subnet::Id'
     Description: >-
-      ID of the subnet to be used for the ISE deployment  in an Availability Zone.
+      ID of the subnet to be used for the ISE deployment  in an Availability Zone A.
+  PrivateSubnet1B:
+    Type: 'AWS::EC2::Subnet::Id'
+    Description: >-
+      ID of the subnet to be used for the ISE deployment  in an Availability Zone B.
   Hostname:
     Description: >-
       Enter the hostname. This field only supports alphanumeric characters and
@@ -75,6 +79,7 @@ Parameters:
     ConstraintDescription: >-
       This field only supports alphanumeric characters and hyphen (-). Hostname
       should not be more than 19 characters.
+  #User defined R53 Private Hosted zone domain name
   DNSDomain:
     Description: >-
       Enter a domain name in correct syntax (for example, cisco.com). The valid
@@ -87,23 +92,6 @@ Parameters:
     ConstraintDescription: >-
       Cannot be an IP address. Valid characters include ASCII characters, any
       numerals, the hyphen (-), and the period (.) for DNS domain.
-  NameServer:
-    Description: >-
-      Enter the IP address of the name server in correct syntax. If you use the
-      wrong syntax, Cisco ISE services might not come up on launch.
-    Type: String
-    Default: '8.8.8.8'
-    AllowedPattern: '\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}\b'
-    ConstraintDescription: Must be a valid IPv4 address for the primary name server.
-  NTPServer:
-    Description: >-
-      Enter the IP address or hostname of the NTP server in correct syntax (for
-      example, time.nist.gov). Your entry is not verified on submission. If you
-      use the wrong syntax, Cisco ISE services might not come up on launch.
-    Type: String
-    Default: '8.8.8.8'
-    AllowedPattern: .+
-    ConstraintDescription: NTP server cannot be empty
   TimeZone:
     Description: Choose a system time zone.
     Type: String
@@ -529,7 +517,24 @@ Parameters:
   VPCID:
     Description: 'ID of the VPC (e.g., vpc-0343606e)'
     Type: 'AWS::EC2::VPC::Id'
-
+  QSS3BucketName:
+    AllowedPattern: "^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$"
+    ConstraintDescription: "Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-)."
+    Default: aws-quickstart
+    Description: "S3 bucket name for the Quick Start assets. Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-)."
+    Type: String
+  QSS3BucketRegion:
+    Default: us-east-1
+    Description: 'The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value.'
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: "^[0-9a-zA-Z-/]*$"
+    ConstraintDescription: "Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/)."
+    Default: quickstart-cisco-ise-on-aws/
+    Description: "S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/)."
+    Type: String
+Conditions:
+  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
 Mappings:
   CiscoISE31AMI:
     us-east-1:
@@ -590,7 +595,7 @@ Resources:
       KeyName: !Ref KeyPairName
       NetworkInterfaces:
         - DeviceIndex: '0'
-          SubnetId: !Ref SubnetId
+          SubnetId: !Ref PrivateSubnet1A
           GroupSet:
             - !Ref MSecurityGroup
       ImageId: !FindInMap 
@@ -618,12 +623,10 @@ Resources:
             - !Ref DNSDomain
             - |+
 
-            - primarynameserver=
-            - !Ref NameServer
+            - primarynameserver=169.254.169.253
             - |+
 
-            - ntpserver=
-            - !Ref NTPServer
+            - ntpserver=169.254.169.123
             - |+
 
             - username=admin
@@ -653,22 +656,169 @@ Resources:
             - !Ref PXGridCloud
             - |+
 
+  #load balancer resources
+  PSNNLB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: network
+      Scheme: internal
+      IpAddressType: ipv4
+      Subnets:
+        - !Ref PrivateSubnet1A
+        - !Ref PrivateSubnet1B
+  PSNTargetGroupforRADIUS1812:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckPort: '443'
+      HealthCheckProtocol: TCP
+      Port: 1812
+      Protocol: UDP
+      TargetType: instance
+      VpcId: !Ref VPCID
+      Tags:
+        - Key: "Name"
+          Value: !Ref IseEc2Instance
+  PSNTargetGroupforRADIUS1813:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckPort: '443'
+      HealthCheckProtocol: TCP
+      Port: 1813
+      Protocol: UDP
+      TargetType: instance
+      VpcId: !Ref VPCID
+      Tags:
+        - Key: "Name"
+          Value: !Ref IseEc2Instance
+  PSNTargetGroupforTACACS49:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckPort: '49'
+      HealthCheckProtocol: TCP
+      Port: 49
+      Protocol: TCP
+      TargetType: instance
+      VpcId: !Ref VPCID
+      Tags:
+        - Key: "Name"
+          Value: !Ref IseEc2Instance
+  PSNListener1:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref PSNTargetGroupforRADIUS1812
+      LoadBalancerArn: !Ref PSNNLB
+      Port: 1645
+      Protocol: UDP
+  PSNListener2:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref PSNTargetGroupforRADIUS1813
+      LoadBalancerArn: !Ref PSNNLB
+      Port: 1646
+      Protocol: UDP
+  PSNListener3:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref PSNTargetGroupforTACACS49
+      LoadBalancerArn: !Ref PSNNLB
+      Port: 49
+      Protocol: TCP
+  
+  #Failover lambda resources
+  CopyLambdaStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: 
+        !Sub 
+          - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/copy-lambdas.yaml
+          - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+            S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+      Parameters:
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+        QSS3BucketRegion: !Ref QSS3BucketRegion
+
+  LambdaBasicExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+          Condition: {}
+      Path: /
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-PSNfailoverlambdaPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:${AWS::Partition}:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - ec2:*
+                Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*
+              - Effect: Allow
+                Action:
+                  - secretsmanager:DescribeSecret
+                  - secretsmanager:ListSecretVersionIds
+                  - secretsmanager:GetResourcePolicy
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:GetRandomPassword
+                Resource: !Sub arn:${AWS::Partition}:secretsmanager:*:*:*:*
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - elasticloadbalancing:Describe
+                Resource: "*"
+
+  #The lambda needs to be written
+  PSNLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.main
+      Timeout: 60
+      Role: !GetAtt 'LambdaBasicExecutionRole.Arn'
+      Runtime: python3.7
+      Code:
+        S3Bucket: !GetAtt 'CopyLambdaStack.Outputs.LambdaZipsBucket'
+        S3Key: !Sub "${QSS3KeyPrefix}functions/packages/lambda.zip"
+      MemorySize: 3008
+  #configuration lambda
+  #Route53 configuration
+  #Backup to S3 configuration
+  #cloudwatch alarms
   Ec2InstanceAutorecoverAlarm:
-      Type: AWS::CloudWatch::Alarm
-      Properties:
-        AlarmActions:
-          - !Sub arn:aws:automate:${AWS::Region}:ec2:recover
-        AlarmDescription: Recover instance if its status checks fail.
-        Namespace: AWS/EC2
-        MetricName: StatusCheckFailed_System
-        Dimensions:
-          - Name: InstanceId
-            Value: !Ref IseEc2Instance
-        EvaluationPeriods: 2
-        Period: 60
-        Statistic: Minimum
-        ComparisonOperator: GreaterThanThreshold
-        Threshold: 0
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Sub arn:aws:automate:${AWS::Region}:ec2:recover
+      AlarmDescription: Recover instance if its status checks fail.
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed_System
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref IseEc2Instance
+      EvaluationPeriods: 2
+      Period: 60
+      Statistic: Minimum
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 0
 Outputs:
   InstanceID:
     Description: 'InstanceID of the newly created ISE EC2 instance '
