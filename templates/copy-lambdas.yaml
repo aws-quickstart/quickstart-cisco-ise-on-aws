@@ -29,7 +29,7 @@ Resources:
       DestBucket:
         Ref: LambdaZipsBucket
       Objects:
-      - functions/packages/lambda.zip
+      - functions/packages/admin_failover/lambda.zip
       SourceBucket:
         Ref: QSS3BucketName
       Prefix:

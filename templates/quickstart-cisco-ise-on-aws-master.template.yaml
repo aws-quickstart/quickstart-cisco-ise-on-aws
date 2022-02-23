@@ -16,8 +16,8 @@ Metadata:
           default: VPC network configuration
         Parameters:
           - VPCCIDR
-          - PublicSubnet1CIDR
-          - PublicSubnet2CIDR
+          #- PublicSubnet1CIDR
+          #- PublicSubnet2CIDR
           - PrivateSubnet1CIDR
           - PrivateSubnet2CIDR
       - Label:
@@ -29,7 +29,8 @@ Metadata:
       - Label:
           default: ISE Small Deployment Instance Details
         Parameters:
-          - Hostname
+          - Node1Hostname
+          - Node2Hostname
           - KeyPairName
           - TimeZone
           - ISEInstanceType
@@ -54,10 +55,10 @@ Metadata:
     ParameterLabels: 
       VPCCIDR:
         default: VPC CIDR
-      PublicSubnet1CIDR:
-        default: Public subnet 1 CIDR for network load balancer
-      PublicSubnet2CIDR:
-        default: Public subnet 2 CIDR for network load balancer
+      #PublicSubnet1CIDR:
+      #  default: Public subnet 1 CIDR for network load balancer
+      #PublicSubnet2CIDR:
+      #  default: Public subnet 2 CIDR for network load balancer
       PrivateSubnet1CIDR:
         default: Private subnet 1 CIDR for ISE VM
       PrivateSubnet2CIDR:
@@ -76,6 +77,10 @@ Metadata:
         default: pxGrid
       PXGridCloud:
         default: pxGrid Cloud
+      Node1Hostname:
+        default: Host name node 1
+      Node2Hostname:
+        default: Host name node 2
       DNSDomain:
         default: DNS Domain
       password:
@@ -105,18 +110,18 @@ Parameters:
     Default: 10.0.32.0/19
     Description: CIDR block for private subnet 2 located in Availability Zone 2.
     Type: String
-  PublicSubnet1CIDR:
-    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
-    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
-    Default: 10.0.128.0/20
-    Description: CIDR block for the public (DMZ) subnet 1 located in Availability Zone 1.
-    Type: String
-  PublicSubnet2CIDR:
-    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
-    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
-    Default: 10.0.144.0/20
-    Description: CIDR block for the public (DMZ) subnet 2 located in Availability Zone 2.
-    Type: String
+  #PublicSubnet1CIDR:
+  #  AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
+  #  ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+  #  Default: 10.0.128.0/20
+  #  Description: CIDR block for the public (DMZ) subnet 1 located in Availability Zone 1.
+  #  Type: String
+  #PublicSubnet2CIDR:
+  #  AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
+  #  ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+  #  Default: 10.0.144.0/20
+  #  Description: CIDR block for the public (DMZ) subnet 2 located in Availability Zone 2.
+  #  Type: String
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
     ConstraintDescription: 'Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).'
@@ -198,12 +203,22 @@ Parameters:
       - 'yes'
       - 'no'
     ConstraintDescription: It can either be yes or no
-  Hostname:
+  Node1Hostname:
     Description: >-
       Enter the hostname. This field only supports alphanumeric characters and
       hyphen (-). The length of the hostname should not exceed 19 characters.
     Type: String
-    Default: iseserver
+    Default: iseserver1
+    AllowedPattern: '^[a-zA-Z0-9-]{1,19}$'
+    ConstraintDescription: >-
+      This field only supports alphanumeric characters and hyphen (-). Hostname
+      should not be more than 19 characters.
+  Node2Hostname:
+    Description: >-
+      Enter the hostname. This field only supports alphanumeric characters and
+      hyphen (-). The length of the hostname should not exceed 19 characters.
+    Type: String
+    Default: iseserver2
     AllowedPattern: '^[a-zA-Z0-9-]{1,19}$'
     ConstraintDescription: >-
       This field only supports alphanumeric characters and hyphen (-). Hostname
@@ -672,8 +687,8 @@ Resources:
         NumberOfAZs: '2'
         PrivateSubnet1ACIDR: !Ref PrivateSubnet1CIDR
         PrivateSubnet2ACIDR: !Ref PrivateSubnet2CIDR
-        PublicSubnet1CIDR: !Ref PublicSubnet1CIDR
-        PublicSubnet2CIDR: !Ref PublicSubnet2CIDR
+        #PublicSubnet1CIDR: !Ref PublicSubnet1CIDR
+        #PublicSubnet2CIDR: !Ref PublicSubnet2CIDR
         VPCCIDR: !Ref VPCCIDR
   WorkloadStack:
     Type: AWS::CloudFormation::Stack
@@ -684,7 +699,8 @@ Resources:
           - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
             S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
-        Hostname: !Ref Hostname
+        Node1Hostname: !Ref Node1Hostname
+        Node2Hostname: !Ref Node2Hostname
         KeyPairName: !Ref KeyPairName
         ManagementSubnet1Id:
           Fn::GetAtt:
@@ -694,6 +710,8 @@ Resources:
           Fn::GetAtt:
           - VPCStack
           - Outputs.PrivateSubnet2AID
+        PrivateSubnet1CIDR: !Ref PrivateSubnet1CIDR
+        PrivateSubnet2CIDR: !Ref PrivateSubnet2CIDR
         TimeZone: !Ref TimeZone
         ISEInstanceType: !Ref ISEInstanceType
         EBSEncrypt: !Ref EBSEncrypt
@@ -713,6 +731,7 @@ Resources:
           Fn::GetAtt:
           - VPCStack
           - Outputs.VPCID
+        VPCCIDR: !Ref VPCCIDR
 
 Outputs:
   VPCID:
