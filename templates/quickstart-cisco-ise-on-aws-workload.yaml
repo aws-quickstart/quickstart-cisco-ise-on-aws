@@ -22,8 +22,6 @@ Metadata:
         Parameters:
           - VPCID
           - DNSDomain
-          - NameServer
-          - NTPServer
       - Label:
           default: ISE Services
         Parameters:
@@ -64,10 +62,6 @@ Metadata:
         default: VPC ID
       DNSDomain:
         default: DNS Domain
-      NameServer:
-        default: Name Server
-      NTPServer:
-        default: NTP Server
       ERSapi:
         default: ERS
       OpenAPI:

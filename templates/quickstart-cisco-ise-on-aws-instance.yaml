@@ -997,7 +997,7 @@ Resources:
                 Resource: !Sub arn:${AWS::Partition}:logs:*:*:*
               - Effect: Allow
                 Action:
-                  - ec2:*
+                  - ec2:Describe*
                 Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*
               - Effect: Allow
                 Action:
@@ -1007,14 +1007,6 @@ Resources:
                   - secretsmanager:GetSecretValue
                   - secretsmanager:GetRandomPassword
                 Resource: !Sub arn:${AWS::Partition}:secretsmanager:*:*:*:*
-              - Effect: Allow
-                Action:
-                  - sns:Publish
-                Resource: "*"
-              - Effect: Allow
-                Action:
-                  - elasticloadbalancing:Describe
-                Resource: "*"
 
   #The lambda needs to be written
   PSNLambda:

@@ -7,10 +7,6 @@ Parameters:
     Default: aws-quickstart
     Description: Alphanumeric string which identifies the S3 bucket name for the QuickStart assets. It's the bucket to store the copy of the Quick Start assets if you decided to customize or extend them for your own use.
     Type: String
-  QSS3BucketRegion:
-    Default: 'us-east-1'
-    Description: 'The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value.'
-    Type: String
   QSS3KeyPrefix:
     AllowedPattern: "^[0-9a-zA-Z-/._]*$"
     ConstraintDescription: S3 key prefix can include numbers, lowercase letters, uppercaseletters, hyphens (-), and forward slash (/).
