@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
   AWS Cloud Formation Template for Cisco Identity Service Engine. CFT Version :
-  4.0
+  4.0 (qs-1sp7ritjt)
 Metadata:
   'AWS::CloudFormation::Interface':
     ParameterGroups:

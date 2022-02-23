@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
-  This temaplate deploys a cisco ise appliance in a VPC
+  This temaplate deploys a cisco ise appliance in a VPC (qs-1sp7rithq)
 Parameters:
   KeyPairName:
     Description: >-
