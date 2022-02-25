@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
-  This temaplate deploys a cisco ise appliance in a VPC (qs-1sp7rithq)
+  This template  deploys a cisco ise appliance in a VPC (qs-1sp7rithq)
 Parameters:
   KeyPairName:
     Description: >-
@@ -971,9 +971,15 @@ Resources:
       Parameters:
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
-        QSS3BucketRegion: !Ref QSS3BucketRegion
 
   LambdaBasicExecutionRole:
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks:
+            - EIAMPolicyActionWildcard
+          ignore_reasons:
+            EIAMPolicyActionWildcard: Multiple actions are needed for manipulation
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
