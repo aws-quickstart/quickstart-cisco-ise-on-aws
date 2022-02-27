@@ -1,28 +1,27 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
   AWS Cloud Formation Template for Cisco Identity Service Engine. CFT Version :
-  4.0
+  4.0 (qs-1sp7ritjt)
 Metadata:
   'AWS::CloudFormation::Interface':
     ParameterGroups:
       - Label:
           default: ISE Small Deployment Instance Details
         Parameters:
-          - Hostname
+          - Node1Hostname
+          - Node2Hostname
           - KeyPairName
           - ManagementSubnet1Id
+          - ManagementSubnet2Id 
           - TimeZone
           - ISEInstanceType
           - EBSEncrypt
           - StorageSize
-          - NumberOfISEVMs
       - Label:
           default: ISE Network Configuration
         Parameters:
           - VPCID
           - DNSDomain
-          - NameServer
-          - NTPServer
       - Label:
           default: ISE Services
         Parameters:
@@ -43,10 +42,14 @@ Metadata:
     ParameterLabels:
       KeyPairName:
         default: SSH key name
-      Hostname:
-        default: Host name
+      Node1Hostname:
+        default: Host name node 1
+      Node2Hostname:
+        default: Host name node 2
       ManagementSubnet1Id:
         default: Management Network 1
+      ManagementSubnet2Id:
+        default: Management Network 2
       TimeZone:
         default: Time Zone
       ISEInstanceType:
@@ -59,10 +62,6 @@ Metadata:
         default: VPC ID
       DNSDomain:
         default: DNS Domain
-      NameServer:
-        default: Name Server
-      NTPServer:
-        default: NTP Server
       ERSapi:
         default: ERS
       OpenAPI:
@@ -79,8 +78,6 @@ Metadata:
         default: Quick Start S3 bucket Region
       QSS3KeyPrefix:
         default: Quick Start S3 key prefix
-      NumberOfISEVMs:
-        default: Number of ISE instances to be deployed
 Parameters:
   KeyPairName:
     Description: >-
@@ -145,12 +142,38 @@ Parameters:
     Type: 'AWS::EC2::Subnet::Id'
     Description: >-
       ID of the public subnet in Availability Zone 1 of your existing VPC (e.g., subnet-z0376dab).
-  Hostname:
+  ManagementSubnet2Id:
+    Type: 'AWS::EC2::Subnet::Id'
+    Description: >-
+      ID of the public subnet in Availability Zone 2 of your existing VPC (e.g., subnet-z0376dab).
+  PrivateSubnet1CIDR:
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.0.0/19
+    Description: CIDR block for private subnet 1 located in Availability Zone 1.
+    Type: String
+  PrivateSubnet2CIDR:
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.32.0/19
+    Description: CIDR block for private subnet 2 located in Availability Zone 2.
+    Type: String
+  Node1Hostname:
     Description: >-
       Enter the hostname. This field only supports alphanumeric characters and
       hyphen (-). The length of the hostname should not exceed 19 characters.
     Type: String
-    Default: iseserver
+    Default: iseserver1
+    AllowedPattern: '^[a-zA-Z0-9-]{1,19}$'
+    ConstraintDescription: >-
+      This field only supports alphanumeric characters and hyphen (-). Hostname
+      should not be more than 19 characters.
+  Node2Hostname:
+    Description: >-
+      Enter the hostname. This field only supports alphanumeric characters and
+      hyphen (-). The length of the hostname should not exceed 19 characters.
+    Type: String
+    Default: iseserver2
     AllowedPattern: '^[a-zA-Z0-9-]{1,19}$'
     ConstraintDescription: >-
       This field only supports alphanumeric characters and hyphen (-). Hostname
@@ -167,23 +190,6 @@ Parameters:
     ConstraintDescription: >-
       Cannot be an IP address. Valid characters include ASCII characters, any
       numerals, the hyphen (-), and the period (.) for DNS domain.
-  NameServer:
-    Description: >-
-      Enter the IP address of the name server in correct syntax. If you use the
-      wrong syntax, Cisco ISE services might not come up on launch.
-    Type: String
-    Default: '8.8.8.8'
-    AllowedPattern: '\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}\b'
-    ConstraintDescription: Must be a valid IPv4 address for the primary name server.
-  NTPServer:
-    Description: >-
-      Enter the IP address or hostname of the NTP server in correct syntax (for
-      example, time.nist.gov). Your entry is not verified on submission. If you
-      use the wrong syntax, Cisco ISE services might not come up on launch.
-    Type: String
-    Default: '8.8.8.8'
-    AllowedPattern: .+
-    ConstraintDescription: NTP server cannot be empty
   TimeZone:
     Description: Choose a system time zone.
     Type: String
@@ -609,6 +615,12 @@ Parameters:
   VPCID:
     Description: ID of your existing VPC for deployment (e.g., vpc-0343606e).
     Type: AWS::EC2::VPC::Id
+  VPCCIDR:
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.0.0/16
+    Description: CIDR block for the VPC.
+    Type: String
   QSS3BucketName:
     AllowedPattern: "^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$"
     ConstraintDescription: "Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-)."
@@ -616,33 +628,17 @@ Parameters:
     Description: "S3 bucket name for the Quick Start assets. Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-)."
     Type: String
   QSS3BucketRegion:
-    Default: 'us-east-1'
+    Default: us-east-1
     Description: 'The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value.'
     Type: String
   QSS3KeyPrefix:
     AllowedPattern: "^[0-9a-zA-Z-/]*$"
     ConstraintDescription: "Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/)."
-    Default: quickstart-cisco-meraki-sd-wan-vmx/
+    Default: quickstart-cisco-ise-on-aws/
     Description: "S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/)."
     Type: String
-  NumberOfISEVMs:
-    Description: Number of vMX instances to be deployed.
-    Type: String
-    AllowedValues:
-      - '1'
-      - '2'
-    Default: '1'
-
 Conditions:
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
-  1ISECondition: !Or
-    - !Equals
-      - !Ref 'NumberOfISEVMs'
-      - '1'
-    - !Condition 2ISECondition
-  2ISECondition: !Equals
-    - !Ref 'NumberOfISEVMs'
-    - '2'
 Mappings:
   CiscoISE31AMI:
     us-east-1:
@@ -678,8 +674,7 @@ Mappings:
     sa-east-1:
       BYOL: ami-0feeceb6d1a0dd691
 Resources:
-  ISE1Stack:
-    Condition: 1ISECondition
+  ISEStack:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL:
@@ -690,28 +685,34 @@ Resources:
       Parameters:
         ISEInstanceType: !Ref ISEInstanceType
         KeyPairName: !Ref KeyPairName
-        SubnetId: !Ref ManagementSubnet1Id
+        PrivateSubnet1A: !Ref ManagementSubnet1Id
+        PrivateSubnet1B: !Ref ManagementSubnet2Id
+        PrivateSubnet1CIDR: !Ref PrivateSubnet1CIDR
+        PrivateSubnet2CIDR: !Ref PrivateSubnet2CIDR
         EBSEncrypt: !Ref EBSEncrypt
         StorageSize: !Ref StorageSize
         TimeZone: !Ref TimeZone
         DNSDomain: !Ref DNSDomain
-        NameServer: !Ref NameServer
-        NTPServer: !Ref NTPServer
         ERSapi: !Ref ERSapi
         OpenAPI: !Ref OpenAPI
         PXGrid: !Ref PXGrid
         PXGridCloud: !Ref PXGridCloud
         password: !Ref password
         VPCID: !Ref VPCID
-        Hostname: !Ref Hostname
+        VPCCIDR: !Ref VPCCIDR
+        Node1Hostname: !Ref Node1Hostname
+        Node2Hostname: !Ref Node2Hostname
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+        QSS3BucketRegion: !Ref QSS3BucketRegion
 
 Outputs:
   VPCID:
     Description: "The ID of the deployed SDWAN VPC"
     Value: !Ref VPCID
-  InstanceID:
-    Description: "The instance ID for the ISE instance"
-    Value:
-      Fn::GetAtt:
-      - ISE1Stack
-      - Outputs.InstanceID
+  IseNode1ID:
+    Description: "The instance ID for the ISE Node 1"
+    Value: !GetAtt ISEStack.Outputs.ISENode1ID
+  IseNode2ID:
+    Description: "The instance ID for the ISE Node 2"
+    Value: !GetAtt ISEStack.Outputs.ISENode2ID

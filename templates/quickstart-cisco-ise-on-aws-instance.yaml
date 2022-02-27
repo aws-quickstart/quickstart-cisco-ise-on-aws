@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
-  This temaplate deploys a cisco ise appliance in a VPC
+  This template  deploys a cisco ise appliance in a VPC (qs-1sp7rithq)
 Parameters:
   KeyPairName:
     Description: >-
@@ -61,20 +61,47 @@ Parameters:
       - 'yes'
       - 'no'
     ConstraintDescription: It can either be yes or no
-  SubnetId:
+  PrivateSubnet1A:
     Type: 'AWS::EC2::Subnet::Id'
     Description: >-
-      ID of the subnet to be used for the ISE deployment  in an Availability Zone.
-  Hostname:
+      ID of the subnet to be used for the ISE deployment  in an Availability Zone A.
+  PrivateSubnet1B:
+    Type: 'AWS::EC2::Subnet::Id'
+    Description: >-
+      ID of the subnet to be used for the ISE deployment  in an Availability Zone B.
+  PrivateSubnet1CIDR:
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.0.0/19
+    Description: CIDR block for private subnet 1 located in Availability Zone 1.
+    Type: String
+  PrivateSubnet2CIDR:
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.32.0/19
+    Description: CIDR block for private subnet 2 located in Availability Zone 2.
+    Type: String
+  Node1Hostname:
     Description: >-
       Enter the hostname. This field only supports alphanumeric characters and
       hyphen (-). The length of the hostname should not exceed 19 characters.
     Type: String
-    Default: iseserver
+    Default: iseserver1
     AllowedPattern: '^[a-zA-Z0-9-]{1,19}$'
     ConstraintDescription: >-
       This field only supports alphanumeric characters and hyphen (-). Hostname
       should not be more than 19 characters.
+  Node2Hostname:
+    Description: >-
+      Enter the hostname. This field only supports alphanumeric characters and
+      hyphen (-). The length of the hostname should not exceed 19 characters.
+    Type: String
+    Default: iseserver2
+    AllowedPattern: '^[a-zA-Z0-9-]{1,19}$'
+    ConstraintDescription: >-
+      This field only supports alphanumeric characters and hyphen (-). Hostname
+      should not be more than 19 characters.
+  #User defined R53 Private Hosted zone domain name
   DNSDomain:
     Description: >-
       Enter a domain name in correct syntax (for example, cisco.com). The valid
@@ -87,23 +114,6 @@ Parameters:
     ConstraintDescription: >-
       Cannot be an IP address. Valid characters include ASCII characters, any
       numerals, the hyphen (-), and the period (.) for DNS domain.
-  NameServer:
-    Description: >-
-      Enter the IP address of the name server in correct syntax. If you use the
-      wrong syntax, Cisco ISE services might not come up on launch.
-    Type: String
-    Default: '8.8.8.8'
-    AllowedPattern: '\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}\b'
-    ConstraintDescription: Must be a valid IPv4 address for the primary name server.
-  NTPServer:
-    Description: >-
-      Enter the IP address or hostname of the NTP server in correct syntax (for
-      example, time.nist.gov). Your entry is not verified on submission. If you
-      use the wrong syntax, Cisco ISE services might not come up on launch.
-    Type: String
-    Default: '8.8.8.8'
-    AllowedPattern: .+
-    ConstraintDescription: NTP server cannot be empty
   TimeZone:
     Description: Choose a system time zone.
     Type: String
@@ -529,7 +539,30 @@ Parameters:
   VPCID:
     Description: 'ID of the VPC (e.g., vpc-0343606e)'
     Type: 'AWS::EC2::VPC::Id'
-
+  VPCCIDR:
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.0.0/16
+    Description: CIDR block for the VPC.
+    Type: String
+  QSS3BucketName:
+    AllowedPattern: "^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$"
+    ConstraintDescription: "Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-)."
+    Default: aws-quickstart
+    Description: "S3 bucket name for the Quick Start assets. Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-)."
+    Type: String
+  QSS3BucketRegion:
+    Default: us-east-1
+    Description: 'The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value.'
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: "^[0-9a-zA-Z-/]*$"
+    ConstraintDescription: "Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/)."
+    Default: quickstart-cisco-ise-on-aws/
+    Description: "S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/)."
+    Type: String
+Conditions:
+  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
 Mappings:
   CiscoISE31AMI:
     us-east-1:
@@ -565,10 +598,10 @@ Mappings:
     sa-east-1:
       BYOL: ami-0feeceb6d1a0dd691
 Resources:
-  MSecurityGroup:
+  ISESecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: Enable HTTP, HTTPS and SSH to the Portal Server
+      GroupDescription: Enable HTTP, HTTPS and SSH to the ISE Server
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
@@ -583,103 +616,474 @@ Resources:
           ToPort: 22
           CidrIp: '0.0.0.0/0'
       VpcId: !Ref VPCID
-  IseEc2Instance:
-    Type: 'AWS::EC2::Instance'
+  IseLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
     Properties:
-      InstanceType: !Ref ISEInstanceType
-      KeyName: !Ref KeyPairName
-      NetworkInterfaces:
-        - DeviceIndex: '0'
-          SubnetId: !Ref SubnetId
-          GroupSet:
-            - !Ref MSecurityGroup
-      ImageId: !FindInMap 
-        - CiscoISE31AMI
-        - !Ref 'AWS::Region'
-        - BYOL
-      BlockDeviceMappings:
+      LaunchTemplateName: !Sub ${AWS::StackName}-00_ISE_cluster_launch_template
+      LaunchTemplateData:
+        InstanceType: !Ref ISEInstanceType
+        KeyName: !Ref KeyPairName
+        ImageId: !FindInMap 
+          - CiscoISE31AMI
+          - !Ref 'AWS::Region'
+          - BYOL
+        BlockDeviceMappings:
         - DeviceName: /dev/sda1
           Ebs:
             VolumeType: gp2
             DeleteOnTermination: 'true'
             Encrypted: !Ref EBSEncrypt
             VolumeSize: !Ref StorageSize
+        SecurityGroupIds:
+          - !Ref ISESecurityGroup
+        TagSpecifications:
+          -
+            ResourceType: 'instance'
+            Tags:
+              - Key: "Name"
+                Value: "ISENode"
+        
+      
+  ISENode1:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref IseLaunchTemplate
+        Version: !GetAtt 'IseLaunchTemplate.LatestVersionNumber'
+      SubnetId: !Ref PrivateSubnet1A
       Tags:
-        - Key: Role
-          Value: Test Instance
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-00_ISE_cluster_node1
       UserData: !Base64 
-        'Fn::Join':
-          - ''
-          - - hostname=
-            - !Ref Hostname
-            - |+
+          'Fn::Join':
+            - ''
+            - - hostname=
+              - !Ref Node1Hostname
+              - |+
 
-            - dnsdomain=
+              - dnsdomain=
+              - !Ref DNSDomain
+              - |+
+
+              - primarynameserver=169.254.169.253
+              - |+
+
+              - ntpserver=169.254.169.123
+              - |+
+
+              - username=admin
+              - |+
+
+              - password=
+              - !Ref password
+              - |+
+
+              - timezone=
+              - !Ref TimeZone
+              - |+
+
+              - ersapi=
+              - !Ref ERSapi
+              - |+
+
+              - openapi=
+              - !Ref OpenAPI
+              - |+
+
+              - pxGrid=
+              - !Ref PXGrid
+              - |+
+
+              - pxgrid_cloud=
+              - !Ref PXGridCloud
+              - |+
+
+  ISENode2:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref IseLaunchTemplate
+        Version: !GetAtt 'IseLaunchTemplate.LatestVersionNumber'
+      SubnetId: !Ref PrivateSubnet1B
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-00_ISE_cluster_node2
+      UserData: !Base64 
+          'Fn::Join':
+            - ''
+            - - hostname=
+              - !Ref Node2Hostname
+              - |+
+
+              - dnsdomain=
+              - !Ref DNSDomain
+              - |+
+
+              - primarynameserver=169.254.169.253
+              - |+
+
+              - ntpserver=169.254.169.123
+              - |+
+
+              - username=admin
+              - |+
+
+              - password=
+              - !Ref password
+              - |+
+
+              - timezone=
+              - !Ref TimeZone
+              - |+
+
+              - ersapi=
+              - !Ref ERSapi
+              - |+
+
+              - openapi=
+              - !Ref OpenAPI
+              - |+
+
+              - pxGrid=
+              - !Ref PXGrid
+              - |+
+
+              - pxgrid_cloud=
+              - !Ref PXGridCloud
+              - |+
+
+  ForwardDNS: 
+    Type: 'AWS::Route53::HostedZone'
+    Properties: 
+      HostedZoneConfig: 
+        Comment: 'Private hosted forward zone for ISE'
+      Name: !Ref DNSDomain
+      VPCs: 
+        - VPCId: !Ref VPCID
+          VPCRegion: !Sub ${AWS::Region}
+      HostedZoneTags: 
+        - Key: 'Name'
+          Value: !Sub 
+          - forwardzone-${DNSDomain}
+          - DNSDomain: !Ref DNSDomain
+  ReverseDNS: 
+    Type: 'AWS::Route53::HostedZone'
+    Properties: 
+      HostedZoneConfig: 
+        Comment: 'Private hosted reverse zone for ISE'
+      Name: !Join
+        - "."
+        - - !Select [1, !Split ['.', !Ref VPCCIDR]]
+          - !Select [0, !Split ['.', !Ref VPCCIDR]]
+          - 'in-addr.arpa'
+      VPCs: 
+        - VPCId: !Ref VPCID
+          VPCRegion: !Sub ${AWS::Region}
+      HostedZoneTags: 
+        - Key: 'Name'
+          Value: !Sub 
+          - reversezone-${DNSDomain}
+          - DNSDomain: !Ref DNSDomain
+  ISEForwardDNSRecords:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      Comment: Create records for Route53 hosted forward zone
+      HostedZoneId: !Ref ForwardDNS
+      RecordSets:
+      - Name: !Join
+          - "."
+          - - !Ref Node1Hostname
             - !Ref DNSDomain
-            - |+
+        ResourceRecords: 
+          - !Join [
+            ".",
+            [!Select [0, !Split ['.', !Ref PrivateSubnet1CIDR]], !Select [1, !Split ['.', !Ref PrivateSubnet1CIDR]], !Select [2, !Split ['.', !Ref PrivateSubnet1CIDR]], '4']
+          ]
+        Type: A
+        TTL: "300"
+      - Name: !Join
+          - "."
+          - - !Ref Node2Hostname
+            - !Ref DNSDomain
+        ResourceRecords: 
+          - !Join [
+            ".",
+            [!Select [0, !Split ['.', !Ref PrivateSubnet2CIDR]], !Select [1, !Split ['.', !Ref PrivateSubnet2CIDR]], !Select [2, !Split ['.', !Ref PrivateSubnet2CIDR]], '4']
+          ]
+        Type: A
+        TTL: "300"
+  ISEReverseDNSRecordNode1:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Comment: Create records for Route53 hosted reverse zone for ise node 1
+      HostedZoneId: !Ref ReverseDNS
+      Name: !Join
+        - "."
+        - - !Select [3, !Split ['.', !GetAtt ISENode1.PrivateIp]]
+          - !Select [2, !Split ['.', !GetAtt ISENode1.PrivateIp]]
+          - !Select [1, !Split ['.', !GetAtt ISENode1.PrivateIp]]
+          - !Select [0, !Split ['.', !GetAtt ISENode1.PrivateIp]]
+          - 'in-addr.arpa'
+      ResourceRecords:
+        - !Join [
+          ".",
+          [!Ref Node1Hostname, !Ref DNSDomain]
+        ]
+      Type: PTR
+      TTL: "300"
+  ISEReverseDNSRecordNode2:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Comment: Create records for Route53 hosted reverse zone for ise node 2
+      HostedZoneId: !Ref ReverseDNS
+      Name: !Join
+        - "."
+        - - !Select [3, !Split ['.', !GetAtt ISENode2.PrivateIp]]
+          - !Select [2, !Split ['.', !GetAtt ISENode2.PrivateIp]]
+          - !Select [1, !Split ['.', !GetAtt ISENode2.PrivateIp]]
+          - !Select [0, !Split ['.', !GetAtt ISENode2.PrivateIp]]
+          - 'in-addr.arpa'
+      ResourceRecords:
+        - !Join [
+          ".",
+          [!Ref Node2Hostname, !Ref DNSDomain]
+        ]
+      Type: PTR
+      TTL: "300"
+  LBDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Type: A
+      Name: !Join
+        - "."
+        - - "lb"
+          - !Ref DNSDomain
+      AliasTarget:
+        HostedZoneId: !GetAtt PSNNLB.CanonicalHostedZoneID
+        DNSName: !GetAtt PSNNLB.DNSName
+      HostedZoneId: !Ref ForwardDNS
+  #load balancer resources
+  PSNNLB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: network
+      Scheme: internal
+      IpAddressType: ipv4
+      SubnetMappings:
+      - SubnetId: !Ref PrivateSubnet1A
+        PrivateIPv4Address: !Join
+          - "."
+          - - !Select [0, !Split ['.', !Ref PrivateSubnet1CIDR]]
+            - !Select [1, !Split ['.', !Ref PrivateSubnet1CIDR]]
+            - !Select [2, !Split ['.', !Ref PrivateSubnet1CIDR]]
+            - '4'
+      - SubnetId: !Ref PrivateSubnet1B
+        PrivateIPv4Address: !Join
+          - "."
+          - - !Select [0, !Split ['.', !Ref PrivateSubnet2CIDR]]
+            - !Select [1, !Split ['.', !Ref PrivateSubnet2CIDR]]
+            - !Select [2, !Split ['.', !Ref PrivateSubnet2CIDR]]
+            - '4'
+      LoadBalancerAttributes:
+        - Key: load_balancing.cross_zone.enabled
+          Value: "true"
+      Tags:
+      - Key: Name
+        Value: !Sub ${VPCID}-Nlb
+  PSNTargetGroupforRADIUS1812:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckPort: '443'
+      HealthCheckProtocol: TCP
+      Port: 1812
+      Protocol: UDP
+      Targets:
+      - Id: !Ref ISENode1
+      - Id: !Ref ISENode2
+      VpcId: !Ref VPCID
+      Tags:
+        - Key: "Name"
+          Value: Radius1812
+  PSNTargetGroupforRADIUS1813:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckPort: '443'
+      HealthCheckProtocol: TCP
+      Port: 1813
+      Protocol: UDP
+      Targets:
+      - Id: !Ref ISENode1
+      - Id: !Ref ISENode2
+      VpcId: !Ref VPCID
+      Tags:
+        - Key: "Name"
+          Value: Radius1813
+  PSNTargetGroupforTACACS49:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckPort: '443'
+      HealthCheckProtocol: TCP
+      Port: 49
+      Protocol: TCP
+      Targets:
+      - Id: !Ref ISENode1
+      - Id: !Ref ISENode2
+      VpcId: !Ref VPCID
+      Tags:
+        - Key: "Name"
+          Value: Tacacs49
+  PSNListener1:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref PSNTargetGroupforRADIUS1812
+      LoadBalancerArn: !Ref PSNNLB
+      Port: 1645
+      Protocol: UDP
+  PSNListener2:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref PSNTargetGroupforRADIUS1813
+      LoadBalancerArn: !Ref PSNNLB
+      Port: 1646
+      Protocol: UDP
+  PSNListener3:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref PSNTargetGroupforTACACS49
+      LoadBalancerArn: !Ref PSNNLB
+      Port: 49
+      Protocol: TCP
+  #lambda boilerplate
+  CopyLambdaStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: 
+        !Sub 
+          - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/copy-lambdas.yaml
+          - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+            S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+      Parameters:
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
 
-            - primarynameserver=
-            - !Ref NameServer
-            - |+
+  LambdaBasicExecutionRole:
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks:
+            - EIAMPolicyActionWildcard
+          ignore_reasons:
+            EIAMPolicyActionWildcard: Multiple actions are needed for manipulation
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+          Condition: {}
+      Path: /
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-PSNfailoverlambdaPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:${AWS::Partition}:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - ec2:Describe*
+                Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*
+              - Effect: Allow
+                Action:
+                  - secretsmanager:DescribeSecret
+                  - secretsmanager:ListSecretVersionIds
+                  - secretsmanager:GetResourcePolicy
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:GetRandomPassword
+                Resource: !Sub arn:${AWS::Partition}:secretsmanager:*:*:*:*
 
-            - ntpserver=
-            - !Ref NTPServer
-            - |+
-
-            - username=admin
-            - |+
-
-            - password=
-            - !Ref password
-            - |+
-
-            - timezone=
-            - !Ref TimeZone
-            - |+
-
-            - ersapi=
-            - !Ref ERSapi
-            - |+
-
-            - openapi=
-            - !Ref OpenAPI
-            - |+
-
-            - pxGrid=
-            - !Ref PXGrid
-            - |+
-
-            - pxgrid_cloud=
-            - !Ref PXGridCloud
-            - |+
-
-  Ec2InstanceAutorecoverAlarm:
-      Type: AWS::CloudWatch::Alarm
-      Properties:
-        AlarmActions:
-          - !Sub arn:aws:automate:${AWS::Region}:ec2:recover
-        AlarmDescription: Recover instance if its status checks fail.
-        Namespace: AWS/EC2
-        MetricName: StatusCheckFailed_System
-        Dimensions:
-          - Name: InstanceId
-            Value: !Ref IseEc2Instance
-        EvaluationPeriods: 2
-        Period: 60
-        Statistic: Minimum
-        ComparisonOperator: GreaterThanThreshold
-        Threshold: 0
+  #The lambda needs to be written
+  PSNLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.main
+      Timeout: 60
+      Role: !GetAtt 'LambdaBasicExecutionRole.Arn'
+      Runtime: python3.7
+      Code:
+        S3Bucket: !GetAtt 'CopyLambdaStack.Outputs.LambdaZipsBucket'
+        S3Key: !Sub "${QSS3KeyPrefix}functions/packages/admin_failover/lambda.zip"
+      MemorySize: 3008
+  #Route53 configuration
+  #cloudwatch alarms
+  ISENode1AutorecoverAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Sub arn:aws:automate:${AWS::Region}:ec2:recover
+      AlarmDescription: Recover instance if its status checks fail.
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed_System
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref ISENode1
+      EvaluationPeriods: 2
+      Period: 60
+      Statistic: Minimum
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 0
+  ISENode2AutorecoverAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Sub arn:aws:automate:${AWS::Region}:ec2:recover
+      AlarmDescription: Recover instance if its status checks fail.
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed_System
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref ISENode2
+      EvaluationPeriods: 2
+      Period: 60
+      Statistic: Minimum
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 0
 Outputs:
-  InstanceID:
-    Description: 'InstanceID of the newly created ISE EC2 instance '
-    Value: !Ref IseEc2Instance
-  PrivateDnsName:
-    Description: Private DNSName of the newly created EC2 instance
+  ISENode1ID:
+    Description: 'InstanceID of the newly created ISE Node 1 '
+    Value: !Ref ISENode1
+  ISENode1PrivateDnsName:
+    Description: Private DNSName of the newly created ISE Node 1
     Value: !GetAtt 
-      - IseEc2Instance
+      - ISENode1
       - PrivateDnsName
-  PrivateIp:
-    Description: Private IP address of the newly created EC2 instance
+  ISENode1PrivateIp:
+    Description: Private IP address of the newly created ISE Node 1
     Value: !GetAtt 
-      - IseEc2Instance
+      - ISENode1
+      - PrivateIp
+  ISENode2ID:
+    Description: 'InstanceID of the newly created ISE Node 2 '
+    Value: !Ref ISENode2
+  ISENode2PrivateDnsName:
+    Description: Private DNSName of the newly created ISE Node 2
+    Value: !GetAtt 
+      - ISENode2
+      - PrivateDnsName
+  ISENode2PrivateIp:
+    Description: Private IP address of the newly created ISE Node 2
+    Value: !GetAtt 
+      - ISENode2
       - PrivateIp
