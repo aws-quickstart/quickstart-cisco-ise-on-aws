@@ -794,22 +794,22 @@ Resources:
           - "."
           - - !Ref Node1Hostname
             - !Ref DNSDomain
-        ResourceRecords: 
-          - !Join [
-            ".",
-            [!Select [0, !Split ['.', !Ref PrivateSubnet1CIDR]], !Select [1, !Split ['.', !Ref PrivateSubnet1CIDR]], !Select [2, !Split ['.', !Ref PrivateSubnet1CIDR]], '4']
-          ]
+        ResourceRecords: !GetAtt ISENode1.PrivateIp
+          # - !Join [
+          #   ".",
+          #   [!Select [0, !Split ['.', !Ref PrivateSubnet1CIDR]], !Select [1, !Split ['.', !Ref PrivateSubnet1CIDR]], !Select [2, !Split ['.', !Ref PrivateSubnet1CIDR]], '4']
+          # ]
         Type: A
         TTL: "300"
       - Name: !Join
           - "."
           - - !Ref Node2Hostname
             - !Ref DNSDomain
-        ResourceRecords: 
-          - !Join [
-            ".",
-            [!Select [0, !Split ['.', !Ref PrivateSubnet2CIDR]], !Select [1, !Split ['.', !Ref PrivateSubnet2CIDR]], !Select [2, !Split ['.', !Ref PrivateSubnet2CIDR]], '4']
-          ]
+        ResourceRecords: !GetAtt ISENode2.PrivateIp
+          # - !Join [
+          #   ".",
+          #   [!Select [0, !Split ['.', !Ref PrivateSubnet2CIDR]], !Select [1, !Split ['.', !Ref PrivateSubnet2CIDR]], !Select [2, !Split ['.', !Ref PrivateSubnet2CIDR]], '4']
+          # ]
         Type: A
         TTL: "300"
   ISEReverseDNSRecordNode1:
