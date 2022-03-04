@@ -982,8 +982,12 @@ Resources:
         config:
           ignore_checks:
             - EIAMPolicyActionWildcard
+            - EIAMPolicyWildcardResource
+            - E9007
           ignore_reasons:
             EIAMPolicyActionWildcard: Multiple actions are needed for manipulation
+            EIAMPolicyWildcardResource: Permission is required on wildcard resource
+            E9007: arn is a service role
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
