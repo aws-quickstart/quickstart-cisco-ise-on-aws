@@ -1333,7 +1333,7 @@ Resources:
             timer.start()
             print('Received event: %s' % json.dumps(event))
             try:
-              return "PAN state"
+              return "running"
             except Exception as e:
               logging.error('Exception: %s' % e, exc_info=True)
               requests_data=json.dumps(dict(Status='FAILURE',Reason='Exception: %s' % e,UniqueId='ISENodeStates',Data=event['ResourceProperties']['AmiId'])).encode('utf-8')
@@ -1398,16 +1398,16 @@ Resources:
             print('Received event: %s' % json.dumps(event))
             print(event['ResourceProperties']['WaitHandle'])
             try:
-              if event['DeploymentState'] == 'available':
-                requests_data=json.dumps(dict(Status='SUCCESS',Reason='Deployment creation successful',UniqueId='ISENodeStates',Data=event)).encode('utf-8')
+              if event['PrimaryState'] == 'running':
+                requests_data=json.dumps(dict(Status='SUCCESS',Reason='Deployment creation successful',UniqueId='ISENodeStates',Data='success')).encode('utf-8')
               else:
-                requests_data=json.dumps(dict(Status='FAILURE',Reason='Invalid Deploymeny Status',UniqueId='ISENodeStates',Data=event)).encode('utf-8')
+                requests_data=json.dumps(dict(Status='FAILURE',Reason='Invalid Deploymeny Status',UniqueId='ISENodeStates',Data='failure')).encode('utf-8')
               response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
               print (response)
               timer.cancel()
             except Exception as e:
               logging.error('Exception: %s' % e, exc_info=True)
-              requests_data=json.dumps(dict(Status='FAILURE',Reason='Exception: %s' % e,UniqueId='ISENodeStates',Data=event)).encode('utf-8')
+              requests_data=json.dumps(dict(Status='FAILURE',Reason='Exception: %s' % e,UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
               response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
               print (response)
               timer.cancel()
