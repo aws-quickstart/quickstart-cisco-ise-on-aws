@@ -752,6 +752,7 @@ Resources:
               - !Ref PXGridCloud
               - |+
 
+  #Route53 configuration
   ForwardDNS: 
     Type: 'AWS::Route53::HostedZone'
     Properties: 
@@ -795,10 +796,11 @@ Resources:
           - - !Ref Node1Hostname
             - !Ref DNSDomain
         ResourceRecords: 
-          - !Join [
-            ".",
-            [!Select [0, !Split ['.', !Ref PrivateSubnet1CIDR]], !Select [1, !Split ['.', !Ref PrivateSubnet1CIDR]], !Select [2, !Split ['.', !Ref PrivateSubnet1CIDR]], '4']
-          ]
+          - !GetAtt ISENode1.PrivateIp
+          # - !Join [
+          #   ".",
+          #   [!Select [0, !Split ['.', !Ref PrivateSubnet1CIDR]], !Select [1, !Split ['.', !Ref PrivateSubnet1CIDR]], !Select [2, !Split ['.', !Ref PrivateSubnet1CIDR]], '4']
+          # ]
         Type: A
         TTL: "300"
       - Name: !Join
@@ -806,10 +808,11 @@ Resources:
           - - !Ref Node2Hostname
             - !Ref DNSDomain
         ResourceRecords: 
-          - !Join [
-            ".",
-            [!Select [0, !Split ['.', !Ref PrivateSubnet2CIDR]], !Select [1, !Split ['.', !Ref PrivateSubnet2CIDR]], !Select [2, !Split ['.', !Ref PrivateSubnet2CIDR]], '4']
-          ]
+          - !GetAtt ISENode2.PrivateIp
+          # - !Join [
+          #   ".",
+          #   [!Select [0, !Split ['.', !Ref PrivateSubnet2CIDR]], !Select [1, !Split ['.', !Ref PrivateSubnet2CIDR]], !Select [2, !Split ['.', !Ref PrivateSubnet2CIDR]], '4']
+          # ]
         Type: A
         TTL: "300"
   ISEReverseDNSRecordNode1:
@@ -972,14 +975,19 @@ Resources:
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
 
-  LambdaBasicExecutionRole:
+  #The lambda needs to be written. Trigger needs to be defined
+  FailoverLambdaExecutionRole:
     Metadata:
       cfn-lint:
         config:
           ignore_checks:
             - EIAMPolicyActionWildcard
+            - EIAMPolicyWildcardResource
+            - E9007
           ignore_reasons:
             EIAMPolicyActionWildcard: Multiple actions are needed for manipulation
+            EIAMPolicyWildcardResource: Permission is required on wildcard resource
+            E9007: arn is a service role
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -989,7 +997,10 @@ Resources:
             Service: lambda.amazonaws.com
           Action: sts:AssumeRole
           Condition: {}
-      Path: /
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Path: "/"
       Policies:
         - PolicyName: !Sub ${AWS::StackName}-PSNfailoverlambdaPolicy
           PolicyDocument:
@@ -1004,6 +1015,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - ec2:Describe*
+                  - ec2:CreateNetworkInterface
                 Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*
               - Effect: Allow
                 Action:
@@ -1013,20 +1025,24 @@ Resources:
                   - secretsmanager:GetSecretValue
                   - secretsmanager:GetRandomPassword
                 Resource: !Sub arn:${AWS::Partition}:secretsmanager:*:*:*:*
-
-  #The lambda needs to be written
-  PSNLambda:
+  
+  FailoverLambda:
     Type: AWS::Lambda::Function
     Properties:
       Handler: lambda_function.main
       Timeout: 60
-      Role: !GetAtt 'LambdaBasicExecutionRole.Arn'
+      Role: !GetAtt 'FailoverLambdaExecutionRole.Arn'
       Runtime: python3.7
       Code:
         S3Bucket: !GetAtt 'CopyLambdaStack.Outputs.LambdaZipsBucket'
         S3Key: !Sub "${QSS3KeyPrefix}functions/packages/admin_failover/lambda.zip"
       MemorySize: 3008
-  #Route53 configuration
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref ISESecurityGroup
+        SubnetIds:
+          - !Ref PrivateSubnet1A
+          - !Ref PrivateSubnet1B
   #cloudwatch alarms
   ISENode1AutorecoverAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -1060,6 +1076,364 @@ Resources:
       Statistic: Minimum
       ComparisonOperator: GreaterThanThreshold
       Threshold: 0
+  # Set up ISE Deployment resources
+  ISEDeployment:
+    Type: Custom::ISEDeployment
+    DependsOn:
+    - DeploymentStateMachine
+    Properties:
+      ServiceToken: !GetAtt DeploymentStateMachineLambda.Arn
+      #Region: !Ref AmiRegion
+      #AmiId: !Ref AmiId
+      WaitHandle: !Ref DeploymentWaitHandle
+      #QSTagKey: !Ref QSTagKey
+      #QSTagValue: !Ref QSTagValue
+  DeploymentStateMachineLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Invokes Lambda that kicks off deployment state machine
+      Handler: index.handler
+      Runtime: python3.6
+      Role: !GetAtt DeploymentStateMachineLambdaRole.Arn
+      Timeout: 300
+      Code:
+        ZipFile: !Sub | 
+          import boto3
+          import json
+          import logging
+          import threading
+          import cfnresponse
+          sfn = boto3.client('stepfunctions')
+          def timeout(event, context):
+            logging.error('Execution is about to time out, sending failure response to CloudFormation')
+            cfnresponse.send(event, context, cfnresponse.FAILED, {}, None)
+          def handler(event, context):
+            timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
+            timer.start()
+            print('Received event: %s' % json.dumps(event))
+            status = cfnresponse.SUCCESS
+            responseData = {}
+            try:
+              if event['RequestType'] == 'Create':
+                response = sfn.start_execution(
+                  stateMachineArn='${DeploymentStateMachine}',
+                  input=json.dumps(event)
+                )
+                responseData = {'executionArn': response['executionArn']}
+              else:
+                print('Nothing to do')
+            except Exception as e:
+              logging.error('Exception: %s' % e, exc_info=True)
+              status = cfnresponse.FAILED
+            finally:
+              timer.cancel()
+              cfnresponse.send(event, context, status, responseData)
+  DeploymentStateMachineLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Path: "/"
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action: 
+            - states:StartExecution
+            Resource: "*"
+  DeploymentStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    DependsOn:
+    - SetPrimaryPANLambda
+    - DescribePrimaryPANLambda
+    - CallbackLambda
+    Properties:
+      RoleArn: !GetAtt StatesExecutionRole.Arn
+      DefinitionString: !Sub |-
+        {
+          "Comment": "A state machine that performs ISE nodes deployment.",
+          "StartAt": "Set Primary PAN",
+          "States": {
+            "Set Primary PAN": {
+              "Type": "Task",
+              "Resource": "${SetPrimaryPANLambda.Arn}",
+              "InputPath": "$",
+              "ResultPath": "$.NodeId",
+              "Next": "Wait 10 Seconds Primary PAN"
+            },
+            "Wait 10 Seconds Primary PAN": {
+              "Type": "Wait",
+              "Seconds": 30,
+              "Next": "Describe Primary PAN"
+            },
+            "Describe Primary PAN": {
+              "Type": "Task",
+              "Resource": "${DescribePrimaryPANLambda.Arn}",
+              "InputPath": "$",
+              "ResultPath": "$.PrimaryState",
+              "Next": "Primary PAN Complete?"
+            },
+            "Primary PAN Complete?": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.PrimaryState",
+                  "StringEquals": "pending",
+                  "Next": "Wait 10 Seconds Primary PAN"
+                },
+                {
+                  "Variable": "$.PrimaryState",
+                  "StringEquals": "running",
+                  "Next": "Send Cfn Response"
+                }
+              ],
+              "Default": "Wait 10 Seconds Primary PAN"
+            },
+            "Send Cfn Response": {
+              "Type": "Task",
+              "Resource": "${CallbackLambda.Arn}",
+              "InputPath": "$",
+              "End": true,
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "States.ALL"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ]
+            }
+          }
+        }
+  StatesExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 
+                - !Sub states.${AWS::Region}.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+  StatesExecutionPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: StatesExecutionPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: "lambda:InvokeFunction"
+            Resource: "*"
+      Roles:
+        - !Ref StatesExecutionRole
+
+  # Set up Wait Condition for State Machine
+  DeploymentWaitHandle:
+    Type: AWS::CloudFormation::WaitConditionHandle
+  DeploymentWaitCondition:
+    Type: AWS::CloudFormation::WaitCondition
+    DependsOn: ISEDeployment
+    Properties:
+      Count: 1
+      Handle: !Ref DeploymentWaitHandle
+      Timeout: 7200
+      
+  # Lambda - Sets one node to Primary PAN
+  SetPrimaryPANLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: !Sub | 
+          import json
+          import logging
+          import threading
+          from botocore.vendored import requests
+          def timeout(event, context):
+            logging.error('Execution is about to time out, sending failure response to CloudFormation')
+            requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
+            response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+            sys.exit(1)
+          def handler(event, context):
+            timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 2, timeout, args=[event, context])
+            try:
+              return "add code in the try block"
+            except Exception as e:
+              logging.error('Exception: %s' % e, exc_info=True)
+              requests_data=json.dumps(dict(Status='FAILURE',Reason='Exception: %s' % e,UniqueId='ISENodeStates',Data=event)).encode('utf-8')
+              response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+              print (response)
+              timer.cancel()
+      Handler: index.handler
+      Role: !GetAtt SetPrimaryPANLambdaExecutionRole.Arn
+      Runtime: python3.6
+      Timeout: 300
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref ISESecurityGroup
+        SubnetIds:
+          - !Ref PrivateSubnet1A
+          - !Ref PrivateSubnet1B
+  SetPrimaryPANLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Path: "/"
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+              - ec2:Describe*
+              - ec2:CreateNetworkInterface
+            Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*
+  # Lambda - Describes Primary PAN status. In this case, used for starting and stopping instances
+  DescribePrimaryPANLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Timeout: 300
+      Code:
+        ZipFile: !Sub | 
+          import json
+          import logging
+          import threading
+          from botocore.vendored import requests
+          import sys
+          def timeout(event, context):
+            logging.error('Execution is about to time out, sending failure response to CloudFormation')
+            requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
+            response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+            sys.exit(1)
+          def handler(event, context):
+            timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 2, timeout, args=[event, context])
+            timer.start()
+            print('Received event: %s' % json.dumps(event))
+            try:
+              return "running"
+            except Exception as e:
+              logging.error('Exception: %s' % e, exc_info=True)
+              requests_data=json.dumps(dict(Status='FAILURE',Reason='Exception: %s' % e,UniqueId='ISENodeStates',Data=event['ResourceProperties']['AmiId'])).encode('utf-8')
+              response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+              print (response)
+              timer.cancel()
+      Handler: index.handler
+      Role: !GetAtt DescribePrimaryPANLambdaExecutionRole.Arn
+      Runtime: python3.6
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref ISESecurityGroup
+        SubnetIds:
+          - !Ref PrivateSubnet1A
+          - !Ref PrivateSubnet1B
+  DescribePrimaryPANLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Path: "/"
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+              - ec2:Describe*
+              - ec2:CreateNetworkInterface
+            Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*
+  # Lambda - Sends Callback to the CloudFormation Wait Condition, signaling whether the Deployment was created successfully
+  CallbackLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Sends callback to CloudFormation to continue
+      Code:
+        ZipFile: |
+          import json
+          import logging
+          import threading
+          from botocore.vendored import requests
+          import sys
+          def timeout(event, context):
+            logging.error('Execution is about to time out, sending failure response to CloudFormation')
+            requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
+            response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+            sys.exit(1)
+          def handler(event, context):
+            timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 2, timeout, args=[event, context])
+            timer.start()
+            print('Received event: %s' % json.dumps(event))
+            print(event['ResourceProperties']['WaitHandle'])
+            try:
+              if event['PrimaryState'] == 'running':
+                requests_data=json.dumps(dict(Status='SUCCESS',Reason='Deployment creation successful',UniqueId='ISENodeStates',Data='success')).encode('utf-8')
+              else:
+                requests_data=json.dumps(dict(Status='FAILURE',Reason='Invalid Deploymeny Status',UniqueId='ISENodeStates',Data='failure')).encode('utf-8')
+              response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+              print (response)
+              timer.cancel()
+            except Exception as e:
+              logging.error('Exception: %s' % e, exc_info=True)
+              requests_data=json.dumps(dict(Status='FAILURE',Reason='Exception: %s' % e,UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
+              response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+              print (response)
+              timer.cancel()
+      Handler: index.handler
+      Runtime: python3.6
+      Role: !GetAtt CallbackRole.Arn
+      Timeout: 300
+  CallbackRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Path: "/"
 Outputs:
   ISENode1ID:
     Description: 'InstanceID of the newly created ISE Node 1 '
