@@ -1237,18 +1237,18 @@ Resources:
               "Type": "Choice",
               "Choices": [
                 {
-                  "Variable": "$.PrimaryState.Payload",
+                  "Variable": "$.Payload",
                   "StringEquals": "pending",
                   "Next": "Wait for ISE to come up"
                 },
                 {
-                  "Variable": "$.PrimaryState.Payload",
+                  "Variable": "$.Payload",
                   "StringEquals": "running",
                   "Next": "Set Primary PAN"
                 }
               ],
               "Default": "Wait for ISE to come up",
-              "InputPath": "$"
+              "InputPath": "$.PrimaryState"
             },
             "Set Primary PAN": {
               "Type": "Task",

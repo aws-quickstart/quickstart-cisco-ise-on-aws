@@ -1224,31 +1224,7 @@ Resources:
             "Wait for ISE to come up": {
               "Type": "Wait",
               "Seconds": 5,
-              "Next": "Check ISE status"
-            },
-            "Check ISE status": {
-              "Type": "Task",
-              "Resource": "${CheckISEStatusLambda.Arn}",
-              "Next": "If ISE is up and running",
-              "ResultPath": "$.PrimaryState",
-              "InputPath": "$"
-            },
-            "If ISE is up and running": {
-              "Type": "Choice",
-              "Choices": [
-                {
-                  "Variable": "$.PrimaryState.Payload",
-                  "StringEquals": "pending",
-                  "Next": "Wait for ISE to come up"
-                },
-                {
-                  "Variable": "$.PrimaryState.Payload",
-                  "StringEquals": "running",
-                  "Next": "Set Primary PAN"
-                }
-              ],
-              "Default": "Wait for ISE to come up",
-              "InputPath": "$"
+              "Next": "Set Primary PAN"
             },
             "Set Primary PAN": {
               "Type": "Task",
