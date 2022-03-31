@@ -12,7 +12,7 @@ project:
     QSS3BucketName: $[taskcat_autobucket]
     QSS3KeyPrefix: "quickstart-cisco-ise-on-aws/"
     QSS3BucketRegion: $[taskcat_current_region]
-    KeyPairName: /Users/muffadal/.ssh/id_rsa
+    KeyPairName: vesivaku02
     AvailabilityZones: $[taskcat_getaz_2]
 tests:
   ise-quickstart:

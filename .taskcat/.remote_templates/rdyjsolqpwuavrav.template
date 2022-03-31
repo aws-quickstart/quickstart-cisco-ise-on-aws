@@ -1063,74 +1063,74 @@ Resources:
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
 
   #The lambda needs to be written. Trigger needs to be defined
-  # FailoverLambdaExecutionRole:
-  #   Metadata:
-  #     cfn-lint:
-  #       config:
-  #         ignore_checks:
-  #           - EIAMPolicyActionWildcard
-  #           - EIAMPolicyWildcardResource
-  #           - E9007
-  #         ignore_reasons:
-  #           EIAMPolicyActionWildcard: Multiple actions are needed for manipulation
-  #           EIAMPolicyWildcardResource: Permission is required on wildcard resource
-  #           E9007: arn is a service role
-  #   Type: AWS::IAM::Role
-  #   Properties:
-  #     AssumeRolePolicyDocument:
-  #       Statement:
-  #       - Effect: Allow
-  #         Principal:
-  #           Service: lambda.amazonaws.com
-  #         Action: sts:AssumeRole
-  #         Condition: {}
-  #     ManagedPolicyArns:
-  #     - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-  #     - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-  #     - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-  #     Path: "/"
-  #     Policies:
-  #       - PolicyName: !Sub ${AWS::StackName}-PSNfailoverlambdaPolicy
-  #         PolicyDocument:
-  #           Version: 2012-10-17
-  #           Statement:
-  #             - Effect: Allow
-  #               Action:
-  #                 - logs:CreateLogGroup
-  #                 - logs:CreateLogStream
-  #                 - logs:PutLogEvents
-  #               Resource: !Sub arn:${AWS::Partition}:logs:*:*:*
-  #             - Effect: Allow
-  #               Action:
-  #                 - ec2:Describe*
-  #                 - ec2:CreateNetworkInterface
-  #               Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*
-  #             - Effect: Allow
-  #               Action:
-  #                 - secretsmanager:DescribeSecret
-  #                 - secretsmanager:ListSecretVersionIds
-  #                 - secretsmanager:GetResourcePolicy
-  #                 - secretsmanager:GetSecretValue
-  #                 - secretsmanager:GetRandomPassword
-  #               Resource: !Sub arn:${AWS::Partition}:secretsmanager:*:*:*:*
+  FailoverLambdaExecutionRole:
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks:
+            - EIAMPolicyActionWildcard
+            - EIAMPolicyWildcardResource
+            - E9007
+          ignore_reasons:
+            EIAMPolicyActionWildcard: Multiple actions are needed for manipulation
+            EIAMPolicyWildcardResource: Permission is required on wildcard resource
+            E9007: arn is a service role
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+          Condition: {}
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Path: "/"
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-PSNfailoverlambdaPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:${AWS::Partition}:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - ec2:Describe*
+                  - ec2:CreateNetworkInterface
+                Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*
+              - Effect: Allow
+                Action:
+                  - secretsmanager:DescribeSecret
+                  - secretsmanager:ListSecretVersionIds
+                  - secretsmanager:GetResourcePolicy
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:GetRandomPassword
+                Resource: !Sub arn:${AWS::Partition}:secretsmanager:*:*:*:*
   
-  # FailoverLambda:
-  #   Type: AWS::Lambda::Function
-  #   Properties:
-  #     Handler: lambda_function.main
-  #     Timeout: 60
-  #     Role: !GetAtt 'FailoverLambdaExecutionRole.Arn'
-  #     Runtime: python3.7
-  #     Code:
-  #       S3Bucket: !GetAtt 'CopyLambdaStack.Outputs.LambdaZipsBucket'
-  #       S3Key: !Sub "${QSS3KeyPrefix}functions/packages/admin_failover/lambda.zip"
-  #     MemorySize: 3008
-  #     VpcConfig:
-  #       SecurityGroupIds:
-  #         - !Ref ISESecurityGroup
-  #       SubnetIds:
-  #         - !Ref PrivateSubnet1A
-  #         - !Ref PrivateSubnet1B
+  FailoverLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.main
+      Timeout: 60
+      Role: !GetAtt 'FailoverLambdaExecutionRole.Arn'
+      Runtime: python3.7
+      Code:
+        S3Bucket: !GetAtt 'CopyLambdaStack.Outputs.LambdaZipsBucket'
+        S3Key: !Sub "${QSS3KeyPrefix}functions/packages/admin_failover/lambda.zip"
+      MemorySize: 3008
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref ISESecurityGroup
+        SubnetIds:
+          - !Ref PrivateSubnet1A
+          - !Ref PrivateSubnet1B
   #cloudwatch alarms
   ISENode1AutorecoverAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -1802,13 +1802,13 @@ Resources:
             timer.start()
             print('Received event: %s' % json.dumps(event))
             try:
-              print("running")
-              requests_data=json.dumps(dict(Status='SUCCESS',Reason='Exception: %s',UniqueId='ISENodeStates',Data=event['StackId'])).encode('utf-8')
-              response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+              return "running"
             except Exception as e:
               logging.error('Exception: %s' % e, exc_info=True)
-            print (response)
-            timer.cancel()
+              requests_data=json.dumps(dict(Status='FAILURE',Reason='Exception: %s' % e,UniqueId='ISENodeStates',Data=event['ResourceProperties']['AmiId'])).encode('utf-8')
+              response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+              print (response)
+              timer.cancel()
       Handler: index.handler
       Role: !GetAtt ValidateDeploymentExecutionRole.Arn
       Runtime: python3.6
