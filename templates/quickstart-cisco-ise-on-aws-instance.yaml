@@ -589,6 +589,22 @@ Parameters:
     Default: quickstart-cisco-ise-on-aws/
     Description: "S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/)."
     Type: String
+  ISENode1IP:
+    Type: String
+    Default: 127.0.0.1
+  ISENode2IP:
+    Type: String
+    Default: 127.0.0.1
+  ISENode1Hostname:
+    Type: String
+    Default: iseserver1
+  ISENode2Hostname:
+    Type: String
+    Default: iserserver2
+  SyncStatus:
+    Type: String
+    Default: pending
+  
 Conditions:
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
 Mappings:
@@ -1216,6 +1232,43 @@ Resources:
             finally:
               timer.cancel()
               cfnresponse.send(event, context, status, responseData)
+
+  ISENode1IPParameter:
+    Type: AWS::SSM::Parameter
+    Properties: 
+      Description: IP Address of Primary PAN
+      Name: PPAN_IP
+      Type: String
+      Value: !Ref ISENode1IP
+  ISENode2IPParameter:
+    Type: AWS::SSM::Parameter
+    Properties: 
+      Description: IP Address of Secondary PAN
+      Name: SPAN_IP
+      Type: String
+      Value: !Ref ISENode2IP
+  ISENode1HostnameParameter:
+    Type: AWS::SSM::Parameter
+    Properties: 
+      Description: Hostname of Primary PAN
+      Name: PPAN_Hostname
+      Type: String
+      Value: !Ref ISENode1Hostname
+  ISENode2HostnameParameter:
+    Type: AWS::SSM::Parameter
+    Properties: 
+      Description: Hostname of Secondary PAN
+      Name: SPAN_Hostname
+      Type: String
+      Value: !Ref ISENode2Hostname
+  SyncStatusParameter:
+    Type: AWS::SSM::Parameter
+    Properties: 
+      Description: Sync status of deployment
+      Name: SyncStatus
+      Type: String
+      Value: !Ref SyncStatus
+   
   DeploymentStateMachineLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -1469,6 +1522,7 @@ Resources:
       - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
       - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
       Path: "/"
       Policies:
       - PolicyName: root
@@ -1595,6 +1649,7 @@ Resources:
       - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
       - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
       Path: "/"
       Policies:
       - PolicyName: root
@@ -1703,6 +1758,7 @@ Resources:
       - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
       - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
       Path: "/"
       Policies:
       - PolicyName: root
@@ -1769,6 +1825,7 @@ Resources:
       - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
       - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
       Path: "/"
       Policies:
       - PolicyName: root
@@ -1835,6 +1892,7 @@ Resources:
       - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
       - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
       Path: "/"
       Policies:
       - PolicyName: root
