@@ -601,6 +601,9 @@ Parameters:
   ISENode2Hostname:
     Type: String
     Default: iserserver2
+  ISENode2Fqdn:
+    Type: String
+    Default: iseserver2.example.com
   SyncStatus:
     Type: String
     Default: pending
@@ -1261,6 +1264,13 @@ Resources:
       Name: SPAN_Hostname
       Type: String
       Value: !Ref ISENode2Hostname
+  ISENode2FqdnParameter:
+    Type: AWS::SSM::Parameter
+    Properties: 
+      Description: FQDN of Secondary PAN
+      Name: Secondary_FQDN
+      Type: String
+      Value: !Ref ISENode2Fqdn
   SyncStatusParameter:
     Type: AWS::SSM::Parameter
     Properties: 
@@ -1449,12 +1459,30 @@ Resources:
           import threading
           import time
           from botocore.vendored import requests
+          import boto3
           
           def handler(event, context):
+              def get_ssm_parameter(ssm_client, ssm_parameter_name):
+                  param_value = ssm_client.get_parameter(
+                  Name=ssm_parameter_name,
+                  WithDecryption=False
+              )
+                 
+                  return param_value.get('Parameter').get('Value')
+              
+              def set_ssm_parameter(ssm_client, ssm_parameter_name, value, Overwrite=True, Type="String"):
+                  response = ssm_client.put_parameter(
+                  Name=ssm_parameter_name,
+                  Value=value,
+                  Overwrite=True,
+                  Type="String"
+              )
+                 
+                  return response
+                  
+              ssm_client = boto3.client('ssm',region_name="us-east-1")
               try:
-                  print("+++++++++++++++Lambda start+++++++")
-                  import boto3
-                  # boto3 client
+                  print("#Code to extract ISE instance IP - start#")
                   value_list = ["isenode01","isenode02"]
                   client = boto3.client("ec2",region_name="us-east-1")
                   custom_filter = [{
@@ -1467,26 +1495,48 @@ Resources:
                       for instance in i["Instances"]:
                           if instance["State"]["Name"] == "running":
                               hostprivateIP.append(instance["PrivateIpAddress"])
-                  print(hostprivateIP)
-                  print("+++++++++++++++Lambda end+++++++++++")
+                  print("Installed ISE Instance IPs are - {}".format(hostprivateIP))
+                  print("#Code to extract ISE instance IP - end#")
                   
-                  primary_ip = hostprivateIP[0]
-                  secondary_ip = hostprivateIP[1]
-                  ADMIN_USERNAME = "admin"
-                  ADMIN_PASSWORD = "Test123"
-                  auth = (ADMIN_USERNAME, ADMIN_PASSWORD)
-                  headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+                  print("#Setting SSM parameters...")
+                  set_ssm_parameter(ssm_client,"PPAN_IP",hostprivateIP[0])
+                  set_ssm_parameter(ssm_client,"SPAN_IP",hostprivateIP[1])
+                  set_ssm_parameter(ssm_client,"ADMIN_USERNAME","admin")
+                  set_ssm_parameter(ssm_client,"ADMIN_PASSWORD","Test123")
+                  
+                  print("#Retriving SSM parameters...")
+                  PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
+                  SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
+                  ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
+                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
+                  API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
+                  API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+                  
+                  print("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
+                  print("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
+                  print("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
+                  print("API_AUTH : {}".format(API_AUTH))
+                  print("API_HEADER : {}".format(API_HEADER))
+                  
                   data = {}
-                  nodes_to_check = [primary_ip, secondary_ip]
+                  nodes_to_check = [PPAN_IP, SPAN_IP]
                   retries = 5
                   while nodes_to_check and retries:
                       for ip in nodes_to_check:
-                          url = 'https://' + ip + '/api/v1/deployment/node'
+                          url = 'https://{}/api/v1/deployment/node'.format(ip)
                           try:
-                              resp = requests.get(url, headers=headers, auth=auth, data=json.dumps(data), verify=False)
+                              resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
+                              print("API response for {} is {} ".format(ip, resp.text))
                               if resp.status_code == 200:
                                   nodes_to_check.remove(ip)
-                          except:
+                                  print("ISE - {} is up and running".format(ip))
+                                  if ip == SPAN_IP:
+                                      json_resp = json.loads(resp.content.decode("utf-8"))
+                                      print ("Secondary Node FQDN is: {}".format(json_resp["response"][0]['fqdn']))
+                                      set_ssm_parameter(ssm_client,"Secondary_FQDN",json_resp["response"][0]['fqdn'])
+                          except Exception as e:
+                              logging.error('Exception: %s' % e, exc_info=True)
+                              print("Exception occured while executing get node details api for {}".format(ip))
                               retries -= 1
                               time.sleep(2)
                   if nodes_to_check:
@@ -1546,82 +1596,50 @@ Resources:
           import threading
           import time
           from botocore.vendored import requests
+          import boto3
           
           def handler(event, context):
-          
+            
+            def get_ssm_parameter(ssm_client, ssm_parameter_name):
+                  param_value = ssm_client.get_parameter(
+                  Name=ssm_parameter_name,
+                  WithDecryption=False
+              )
+                 
+                  return param_value.get('Parameter').get('Value')
+                  
+            ssm_client = boto3.client('ssm',region_name="us-east-1")
+            
+            print("#Retriving SSM parameters...")
+            PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
+            SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
+            ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
+            ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
+            API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
+            API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+                  
+            print("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
+            print("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
+            print("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
+            print("API_AUTH : {}".format(API_AUTH))
+            print("API_HEADER : {}".format(API_HEADER))
+            
             try:
-              print("+++++++++++++++Lambda start+++++++")
-              import boto3
-              # boto3 client
-              value_list = ["isenode01","isenode02"]
-              client = boto3.client("ec2",region_name="us-east-1")
-              custom_filter = [{
-                  'Name':'tag:Testnode', 
-                  'Values': value_list}]
-              response = client.describe_instances(Filters=custom_filter)
-              hostprivateIP = []
-              # fetchin private IP address of the running instances
-              for i in response["Reservations"]:
-                  for instance in i["Instances"]:
-                      if instance["State"]["Name"] == "running":
-                          hostprivateIP.append(instance["PrivateIpAddress"])
-              print(hostprivateIP)
-              print("+++++++++++++++Lambda end+++++++++++")
-              
-              # print("+++++++++++++++Standalone to primary start+++++++++++")
-              primary_ip = hostprivateIP[0]
-              ADMIN_USERNAME = "admin"
-              ADMIN_PASSWORD = "Test123"
-              auth = (ADMIN_USERNAME, ADMIN_PASSWORD)
-              headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-              url = 'https://' + primary_ip + '/api/v1/deployment/primary'
+              url = 'https://{}/api/v1/deployment/primary'.format(PPAN_IP)
               data = {}
-              resp = requests.post(url, headers=headers, auth=auth, data=json.dumps(data), verify=False)
+              resp = requests.post(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
               
-              print("Response : {}".format(resp))
+              print("API Response is : {}".format(resp))
               if resp.status_code == 200:
                   if "success" in resp:
-                      print("##### Standalone to Primary Successful on {0} #####".format(nodeip))
+                      print("##### Standalone to Primary Successful on {} #####".format(nodeip))
                   return "running"
               else:
                 return "pending"
-                                
-              # elif resp.status_code == 400:
-              #     raise Exception("FAILED : Node is not Standalone")
-              # else:
-              #     raise Exception("The response of promoting Standalone to Primary on the node {0} is {1}".format(nodeip, resp.status_code))
-              
-              # print("+++++++++++++++Standalone to primary end+++++++++++")
-              
-              # print("+++++++++++++++Standalone to secondary start+++++++++++")
-              # roles_enabled = ["SecondaryAdmin","SecondaryMonitoring"]
-              # service_enabled = ["Session", "Profiler"]
-              # print('Register {} as secondary node'.format(secondary_ip))
-              # url = 'https://' + primary_ip + '/api/v1/deployment/node'
-              # data = {"allowCertImport": True,
-              #         "fqdn": "iseserver2.example.com",
-              #         "userName": ADMIN_USERNAME,
-              #         "password": ADMIN_PASSWORD,
-              #         "roles": roles_enabled,
-              #         "services": service_enabled,
-              #         }
-              # print('Url: {}, Data: {}'.format(url, data))
-              # retries = 3
-              # for retry in range(retries):
-              #     resp = requests.post(url, headers=headers, auth=auth, data=json.dumps(data), verify=False)
-              #     print('Register secondary response: {}, {}'.format(resp.status_code, resp.text))
-              #     # if resp.status_code != 200:
-              #     #     # add code to collect support bundle
-              #     #     print("Register api call returned other than 200 status code, Retrying after 2 mins...")
-              #     #     time.sleep(120)
-              #     #     continue
-              #     # else:
-              #     #     print('Sleep for 10 mins before checking status')
-              #     #     time.sleep(600)
-              #     #     return True   
-              # print("+++++++++++++++Standalone to secondary end+++++++++++")
+                          
             except Exception as e:
               logging.error('Exception: %s' % e, exc_info=True)
+
 
       Handler: index.handler
       Role: !GetAtt SetPrimaryPANLambdaExecutionRole.Arn
@@ -1673,48 +1691,42 @@ Resources:
           import threading
           import time
           from botocore.vendored import requests
+          import boto3
+          
           def handler(event, context):
-              
+            
+              def get_ssm_parameter(ssm_client, ssm_parameter_name):
+                  param_value = ssm_client.get_parameter(
+                  Name=ssm_parameter_name,
+                  WithDecryption=False
+              )
+                 
+                  return param_value.get('Parameter').get('Value')
+                  
+              ssm_client = boto3.client('ssm',region_name="us-east-1")
+            
+              print("#Retriving SSM parameters...")
+              PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
+              SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
+              Secondary_FQDN = get_ssm_parameter(ssm_client,"Secondary_FQDN")
+              ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
+              ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
+              API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
+              API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+                  
+              print("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
+              print("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
+              print("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
+              print("API_AUTH : {}".format(API_AUTH))
+              print("API_HEADER : {}".format(API_HEADER))
+              print("# Register Secondary node to deployment - start...")
               try:
-                print("+++++++++++++++Lambda start+++++++")
-                import boto3
-                # boto3 client
-                value_list = ["isenode01","isenode02"]
-                client = boto3.client("ec2",region_name="us-east-1")
-                custom_filter = [{
-                    'Name':'tag:Testnode', 
-                    'Values': value_list}]
-                response = client.describe_instances(Filters=custom_filter)
-                hostprivateIP = []
-                # fetchin private IP address of the running instances
-                for i in response["Reservations"]:
-                    for instance in i["Instances"]:
-                        if instance["State"]["Name"] == "running":
-                            hostprivateIP.append(instance["PrivateIpAddress"])
-                print(hostprivateIP)
-                print("+++++++++++++++Lambda end+++++++++++")
-                
-                primary_ip = hostprivateIP[0]
-                ADMIN_USERNAME = "admin"
-                ADMIN_PASSWORD = "Test123"
-                auth = (ADMIN_USERNAME, ADMIN_PASSWORD)
-                headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-                url = 'https://' + primary_ip + '/api/v1/deployment/node'
-                
-                data = {}
-                print("+++++++++++++++Standalone to secondary start+++++++++++")
-                resp = requests.get(url, headers=headers, auth=auth, data=json.dumps(data), verify=False)
-                test = resp.content.decode("utf-8")
-                test = json.loads(test)
-                for item in test["response"]:
-                    if "PrimaryAdmin" in item["roles"]:
-                        primary_ip = (item["ipAddress"])
                 roles_enabled = ["SecondaryAdmin","SecondaryMonitoring"]
                 service_enabled = ["Session", "Profiler"]
                 
-                url = 'https://' + primary_ip + '/api/v1/deployment/node'
+                url = 'https://{}/api/v1/deployment/node'.format(PPAN_IP)
                 data = {"allowCertImport": True,
-                        "fqdn": "iseserver2.example.com",
+                        "fqdn": Secondary_FQDN,
                         "userName": ADMIN_USERNAME,
                         "password": ADMIN_PASSWORD,
                         "roles": roles_enabled,
@@ -1722,17 +1734,17 @@ Resources:
                         }
                 print('Url: {}, Data: {}'.format(url, data))
           
-                resp = requests.post(url, headers=headers, auth=auth, data=json.dumps(data), verify=False)
+                resp = requests.post(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
                 print('Register secondary response: {}, {}'.format(resp.status_code, resp.text))
-                if resp.status_code != 200:
-                    # add code to collect support bundle
-                    print("Register api call returned other than 200 status code, Retrying after 2 mins...")
+                if resp.status_code == 200:
+                    print("Register Secondary node is successfull, API response is {}".format(resp.text))
                     return "running"
                 else:
+                    print("Register Secondary node failed, API response is {}".format(resp.text))
                     return "pending"
-                print("+++++++++++++++Standalone to secondary end+++++++++++")
               except Exception as e:
                 logging.error('Exception: %s' % e, exc_info=True)
+
       Handler: index.handler
       Role: !GetAtt RegisterSecondaryNodeExecutionRole.Arn
       Runtime: python3.6
@@ -1781,25 +1793,62 @@ Resources:
           import json
           import logging
           import threading
+          import time
           from botocore.vendored import requests
-          import sys
-          def timeout(event, context):
-            logging.error('Execution is about to time out, sending failure response to CloudFormation')
-            requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
-            response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
-            sys.exit(1)
+          import boto3
+          
           def handler(event, context):
-            timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 2, timeout, args=[event, context])
-            timer.start()
-            print('Received event: %s' % json.dumps(event))
-            try:
-              return "running"
-            except Exception as e:
-              logging.error('Exception: %s' % e, exc_info=True)
-              requests_data=json.dumps(dict(Status='FAILURE',Reason='Exception: %s' % e,UniqueId='ISENodeStates',Data=event['ResourceProperties']['AmiId'])).encode('utf-8')
-              response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
-              print (response)
-              timer.cancel()
+              def get_ssm_parameter(ssm_client, ssm_parameter_name):
+                  param_value = ssm_client.get_parameter(
+                  Name=ssm_parameter_name,
+                  WithDecryption=False
+              )
+                 
+                  return param_value.get('Parameter').get('Value')
+              def set_ssm_parameter(ssm_client, ssm_parameter_name, value, Overwrite=True, Type="String"):
+                  response = ssm_client.put_parameter(
+                  Name=ssm_parameter_name,
+                  Value=value,
+                  Overwrite=True,
+                  Type="String"
+              )
+                 
+                  return response
+                  
+              ssm_client = boto3.client('ssm',region_name="us-east-1")
+              try:
+                  print("#Retriving SSM parameters...")
+                  PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
+                  ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
+                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
+                  API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
+                  API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+                  
+                  print("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
+                  print("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
+                  print("API_AUTH : {}".format(API_AUTH))
+                  print("API_HEADER : {}".format(API_HEADER))
+                  
+                  data = {}
+                  
+                  url = 'https://{}/api/v1/deployment/node'.format(PPAN_IP)
+                  try:
+                      resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
+                      print("API response for checking node sync status and roles is: {} ".format(resp.text))
+                      if resp.status_code == 200:
+                        json_resp = json.loads(resp.content.decode("utf-8"))
+                        if json_resp["response"][0]['nodeStatus'] == "Connected" and json_resp["response"][1]['nodeStatus'] == "Connected":
+                          set_ssm_parameter(ssm_client,"SyncStatus","SYNC_COMPLETED")
+                          return "running"
+                  except Exception as e:
+                      logging.error('Exception: %s' % e, exc_info=True)
+                      print("Exception occured while executing get node details api for {}".format(ip))
+                      return "pending"
+                      
+              except Exception as e:
+                logging.error('Exception: %s' % e, exc_info=True)
+
+
       Handler: index.handler
       Role: !GetAtt CheckSyncStatusExecutionRole.Arn
       Runtime: python3.6
@@ -1847,25 +1896,61 @@ Resources:
           import json
           import logging
           import threading
+          import time
           from botocore.vendored import requests
-          import sys
-          def timeout(event, context):
-            logging.error('Execution is about to time out, sending failure response to CloudFormation')
-            requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
-            response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
-            sys.exit(1)
+          import boto3
+          
           def handler(event, context):
-            timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 2, timeout, args=[event, context])
-            timer.start()
-            print('Received event: %s' % json.dumps(event))
-            try:
-              print("running")
-              requests_data=json.dumps(dict(Status='SUCCESS',Reason='Exception: %s',UniqueId='ISENodeStates',Data=event['StackId'])).encode('utf-8')
-              response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
-            except Exception as e:
-              logging.error('Exception: %s' % e, exc_info=True)
-            print (response)
-            timer.cancel()
+              def get_ssm_parameter(ssm_client, ssm_parameter_name):
+                  param_value = ssm_client.get_parameter(
+                  Name=ssm_parameter_name,
+                  WithDecryption=False
+              )
+                 
+                  return param_value.get('Parameter').get('Value')
+              def set_ssm_parameter(ssm_client, ssm_parameter_name, value, Overwrite=True, Type="String"):
+                  response = ssm_client.put_parameter(
+                  Name=ssm_parameter_name,
+                  Value=value,
+                  Overwrite=True,
+                  Type="String"
+              )
+                 
+                  return response
+                  
+              ssm_client = boto3.client('ssm',region_name="us-east-1")
+              try:
+                  print("#Retriving SSM parameters...")
+                  PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
+                  ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
+                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
+                  API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
+                  API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+                  
+                  print("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
+                  print("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
+                  print("API_AUTH : {}".format(API_AUTH))
+                  print("API_HEADER : {}".format(API_HEADER))
+                  
+                  data = {}
+                  
+                  url = 'https://{}/api/v1/deployment/node'.format(PPAN_IP)
+                  try:
+                      resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
+                      print("API response for checking node sync status and roles is: {} ".format(resp.text))
+                      if resp.status_code == 200:
+                        json_resp = json.loads(resp.content.decode("utf-8"))
+                        if json_resp["response"][0]['nodeStatus'] == "Connected" and json_resp["response"][1]['nodeStatus'] == "Connected":
+                          set_ssm_parameter(ssm_client,"SyncStatus","SYNC_COMPLETED")
+                          return "running"
+                  except Exception as e:
+                      logging.error('Exception: %s' % e, exc_info=True)
+                      print("Exception occured while executing get node details api for {}".format(ip))
+                      return "pending"
+                      
+              except Exception as e:
+                logging.error('Exception: %s' % e, exc_info=True)
+      
       Handler: index.handler
       Role: !GetAtt ValidateDeploymentExecutionRole.Arn
       Runtime: python3.6
