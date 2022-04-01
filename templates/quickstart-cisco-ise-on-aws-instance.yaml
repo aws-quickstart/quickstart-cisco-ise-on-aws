@@ -1536,7 +1536,7 @@ Resources:
                                       set_ssm_parameter(ssm_client,"Secondary_FQDN",json_resp["response"][0]['fqdn'])
                           except Exception as e:
                               logging.error('Exception: %s' % e, exc_info=True)
-                              print("Exception occured while executing get node details api for {}".format(ip))
+                              print("Exception occured while executing get node details api for {}".format(PPAN_IP))
                               retries -= 1
                               time.sleep(2)
                   if nodes_to_check:
@@ -1632,7 +1632,7 @@ Resources:
               print("API Response is : {}".format(resp))
               if resp.status_code == 200:
                   if "success" in resp:
-                      print("##### Standalone to Primary Successful on {} #####".format(nodeip))
+                      print("##### Standalone to Primary Successful on {} #####".format(PPAN_IP))
                   return "running"
               else:
                 return "pending"
@@ -1842,7 +1842,7 @@ Resources:
                           return "running"
                   except Exception as e:
                       logging.error('Exception: %s' % e, exc_info=True)
-                      print("Exception occured while executing get node details api for {}".format(ip))
+                      print("Exception occured while executing get node details api for {}".format(PPAN_IP))
                       return "pending"
                       
               except Exception as e:
@@ -1899,8 +1899,15 @@ Resources:
           import time
           from botocore.vendored import requests
           import boto3
+          import sys
           
           def handler(event, context):
+              def timeout(event, context):
+                  logging.error('Execution is about to time out, sending failure response to CloudFormation')
+                  requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
+                  response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                  sys.exit(1)
+                  
               def get_ssm_parameter(ssm_client, ssm_parameter_name):
                   param_value = ssm_client.get_parameter(
                   Name=ssm_parameter_name,
@@ -1917,7 +1924,12 @@ Resources:
               )
                  
                   return response
-                  
+              
+              timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 2, timeout, args=[event, context])
+              timer.start()
+              print('Received event: %s' % json.dumps(event))
+              print(event['ResourceProperties']['WaitHandle'])
+              
               ssm_client = boto3.client('ssm',region_name="us-east-1")
               try:
                   print("#Retriving SSM parameters...")
@@ -1942,14 +1954,36 @@ Resources:
                         json_resp = json.loads(resp.content.decode("utf-8"))
                         if json_resp["response"][0]['nodeStatus'] == "Connected" and json_resp["response"][1]['nodeStatus'] == "Connected":
                           set_ssm_parameter(ssm_client,"SyncStatus","SYNC_COMPLETED")
+                          requests_data=json.dumps(dict(Status='SUCCESS',Reason='Deployment creation successful',UniqueId='ISENodeStates',Data='success')).encode('utf-8')
+                          response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                          print (response)
+                          timer.cancel()
                           return "running"
+                        else:
+                          requests_data=json.dumps(dict(Status='FAILURE',Reason='Deployment Validation successful',UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
+                          response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                          print (response)
+                          timer.cancel()
+                      else:
+                          requests_data=json.dumps(dict(Status='FAILURE',Reason='Deployment Validation successful',UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
+                          response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                          print (response)
+                          timer.cancel()  
                   except Exception as e:
                       logging.error('Exception: %s' % e, exc_info=True)
-                      print("Exception occured while executing get node details api for {}".format(ip))
+                      print("Exception occured while executing get node details api for {}".format(PPAN_IP))
+                      requests_data=json.dumps(dict(Status='FAILURE',Reason='Exception: %s' % e,UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
+                      response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                      print (response)
+                      timer.cancel()
                       return "pending"
                       
               except Exception as e:
                 logging.error('Exception: %s' % e, exc_info=True)
+                requests_data=json.dumps(dict(Status='FAILURE',Reason='Exception: %s' % e,UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
+                response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                print (response)
+                timer.cancel()
       
       Handler: index.handler
       Role: !GetAtt ValidateDeploymentExecutionRole.Arn
