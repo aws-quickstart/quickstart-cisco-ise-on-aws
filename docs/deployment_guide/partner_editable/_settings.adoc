@@ -1,6 +1,6 @@
 :quickstart-project-name: quickstart-repo-name
 :quickstart-github-org: aws-quickstart
-:partner-product-name: Full Product Name
+:partner-product-name: Cisco Identity services Engine
 :partner-product-short-name: Product Name
 :partner-company-name: Example Company Name, Ltd.
 :doc-month: January
