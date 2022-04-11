@@ -21,13 +21,6 @@ Parameters:
       - c5.9xlarge
       - t3.xlarge
     ConstraintDescription: Instance type should be one of the allowed values
-  # WindowsInstanceType:
-  #   Type: String
-  #   Description: Choose the required Cisco ISE instance type.
-  #   Default: t3.micro
-  #   AllowedValues:
-  #     - t3.micro
-  #   ConstraintDescription: Instance type should be one of the allowed values
   EBSEncrypt:
     Description: Choose true to enable EBS encryption.
     Type: String
@@ -68,26 +61,6 @@ Parameters:
       - 'yes'
       - 'no'
     ConstraintDescription: It can either be yes or no
-  # PublicSubnet1:
-  #   Type: 'AWS::EC2::Subnet::Id'
-  #   Description: >-
-  #     ID of the public subnet to be used for the ISE deployment  in an Availability Zone A.
-  # PublicSubnet1:
-  #   Type: 'AWS::EC2::Subnet::Id'
-  #   Description: >-
-  #     ID of the public subnet to be used for the ISE deployment  in an Availability Zone B.
-  # PublicSubnet1CIDR:
-  #   AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
-  #   ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
-  #   Default: 10.0.128.0/20
-  #   Description: CIDR block for the public DMZ subnet 1 located in Availability Zone 1
-  #   Type: String
-  # PublicSubnet2CIDR:
-  #   AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
-  #   ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
-  #   Default: 10.0.144.0/20
-  #   Description: CIDR block for the public DMZ subnet 2 located in Availability Zone 2
-  #   Type: String
   PrivateSubnet1A:
     Type: 'AWS::EC2::Subnet::Id'
     Description: >-
@@ -595,19 +568,10 @@ Parameters:
   ISENode2IP:
     Type: String
     Default: 127.0.0.1
-  ISENode1Hostname:
-    Type: String
-    Default: iseserver1
-  ISENode2Hostname:
-    Type: String
-    Default: iserserver2
   ISENode2Fqdn:
     Type: String
     Default: iseserver2.example.com
-  SyncStatus:
-    Type: String
-    Default: pending
-  
+
 Conditions:
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
 Mappings:
@@ -650,42 +614,10 @@ Resources:
     Properties:
       GroupDescription: Enable HTTP, HTTPS and SSH to the ISE Server
       SecurityGroupIngress:
-        # - IpProtocol: tcp
-        #   FromPort: 80
-        #   ToPort: 80
-        #   CidrIp: '0.0.0.0/0'
-        # - IpProtocol: tcp
-        #   FromPort: 443
-        #   ToPort: 443
-        #   CidrIp: '0.0.0.0/0'
-        # - IpProtocol: tcp
-        #   FromPort: 22
-        #   ToPort: 22
-        #   CidrIp: '0.0.0.0/0'
-        # - IpProtocol: icmp
-        #   FromPort: -1
-        #   ToPort: -1
-        #   CidrIp: '0.0.0.0/0'
-        # - FromPort: 53
-        #   ToPort: 53
-        #   IpProtocol: udp
-        #   Description: "Allow DNS traffic - UDP 53"
-        #   CidrIp: '0.0.0.0/0'
         - IpProtocol: -1
-          Description: "Allow DNS traffic - TCP 53"
+          Description: "Allow Internal traffic"
           CidrIp: '0.0.0.0/0'
       VpcId: !Ref VPCID
-      
-  # WindowsSecurityGroup:
-  #   Type: 'AWS::EC2::SecurityGroup'
-  #   Properties:
-  #     GroupDescription: Enable Rdp access to Windows VM
-  #     SecurityGroupIngress:
-  #       - IpProtocol: tcp
-  #         FromPort: 3389
-  #         ToPort: 3389
-  #         CidrIp: '0.0.0.0/0'
-  #     VpcId: !Ref VPCID
       
   IseLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
@@ -713,34 +645,6 @@ Resources:
             Tags:
               - Key: "Name"
                 Value: "ISENode"
-                
-  # WindowsLaunchTemplate:
-  #   Type: AWS::EC2::LaunchTemplate
-  #   Properties:
-  #     LaunchTemplateName: !Sub ${AWS::StackName}-00_Windows_launch_template
-  #     LaunchTemplateData:
-  #       InstanceType: WindowsInstanceType
-  #       KeyName: !Ref KeyPairName
-  #       ImageId: !FindInMap 
-  #         - windows_ami
-  #         - !Ref 'AWS::Region'
-  #         - BYOL
-  #       BlockDeviceMappings:
-  #       - DeviceName: /dev/sda1
-  #         Ebs:
-  #           VolumeType: gp2
-  #           DeleteOnTermination: 'true'
-  #           Encrypted: !Ref EBSEncrypt
-  #           VolumeSize: !Ref StorageSize
-  #       SecurityGroupIds:
-  #         - !Ref WindowsSecurityGroup
-  #       TagSpecifications:
-  #         -
-  #           ResourceType: 'instance'
-  #           Tags:
-  #             - Key: "Name"
-  #               Value: "WindowsRdp"        
-                
   ISENode1:
     Type: 'AWS::EC2::Instance'
     Properties:
@@ -794,16 +698,6 @@ Resources:
               - pxgrid_cloud=
               - !Ref PXGridCloud
               - |+
-  # WindowsRdp:
-  #   Type: 'AWS::EC2::Instance'
-  #   Properties:
-  #     LaunchTemplate:
-  #       LaunchTemplateId: !Ref WindowsLaunchTemplate
-  #       Version: !GetAtt 'WindowsLaunchTemplate.LatestVersionNumber'
-  #     SubnetId: !Ref PublicSubnet1
-  #     Tags:
-  #       - Key: "Testnode"
-  #         Value: "Windows01"
   ISENode2:
     Type: 'AWS::EC2::Instance'
     Properties:
@@ -903,10 +797,7 @@ Resources:
             - !Ref DNSDomain
         ResourceRecords: 
           - !GetAtt ISENode1.PrivateIp
-          # - !Join [
-          #   ".",
-          #   [!Select [0, !Split ['.', !Ref PrivateSubnet1CIDR]], !Select [1, !Split ['.', !Ref PrivateSubnet1CIDR]], !Select [2, !Split ['.', !Ref PrivateSubnet1CIDR]], '4']
-          # ]
+          
         Type: A
         TTL: "300"
       - Name: !Join
@@ -915,10 +806,7 @@ Resources:
             - !Ref DNSDomain
         ResourceRecords: 
           - !GetAtt ISENode2.PrivateIp
-          # - !Join [
-          #   ".",
-          #   [!Select [0, !Split ['.', !Ref PrivateSubnet2CIDR]], !Select [1, !Split ['.', !Ref PrivateSubnet2CIDR]], !Select [2, !Split ['.', !Ref PrivateSubnet2CIDR]], '4']
-          # ]
+          
         Type: A
         TTL: "300"
   ISEReverseDNSRecordNode1:
@@ -1081,75 +969,6 @@ Resources:
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
 
-  #The lambda needs to be written. Trigger needs to be defined
-  # FailoverLambdaExecutionRole:
-  #   Metadata:
-  #     cfn-lint:
-  #       config:
-  #         ignore_checks:
-  #           - EIAMPolicyActionWildcard
-  #           - EIAMPolicyWildcardResource
-  #           - E9007
-  #         ignore_reasons:
-  #           EIAMPolicyActionWildcard: Multiple actions are needed for manipulation
-  #           EIAMPolicyWildcardResource: Permission is required on wildcard resource
-  #           E9007: arn is a service role
-  #   Type: AWS::IAM::Role
-  #   Properties:
-  #     AssumeRolePolicyDocument:
-  #       Statement:
-  #       - Effect: Allow
-  #         Principal:
-  #           Service: lambda.amazonaws.com
-  #         Action: sts:AssumeRole
-  #         Condition: {}
-  #     ManagedPolicyArns:
-  #     - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-  #     - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-  #     - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-  #     Path: "/"
-  #     Policies:
-  #       - PolicyName: !Sub ${AWS::StackName}-PSNfailoverlambdaPolicy
-  #         PolicyDocument:
-  #           Version: 2012-10-17
-  #           Statement:
-  #             - Effect: Allow
-  #               Action:
-  #                 - logs:CreateLogGroup
-  #                 - logs:CreateLogStream
-  #                 - logs:PutLogEvents
-  #               Resource: !Sub arn:${AWS::Partition}:logs:*:*:*
-  #             - Effect: Allow
-  #               Action:
-  #                 - ec2:Describe*
-  #                 - ec2:CreateNetworkInterface
-  #               Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*
-  #             - Effect: Allow
-  #               Action:
-  #                 - secretsmanager:DescribeSecret
-  #                 - secretsmanager:ListSecretVersionIds
-  #                 - secretsmanager:GetResourcePolicy
-  #                 - secretsmanager:GetSecretValue
-  #                 - secretsmanager:GetRandomPassword
-  #               Resource: !Sub arn:${AWS::Partition}:secretsmanager:*:*:*:*
-  
-  # FailoverLambda:
-  #   Type: AWS::Lambda::Function
-  #   Properties:
-  #     Handler: lambda_function.main
-  #     Timeout: 60
-  #     Role: !GetAtt 'FailoverLambdaExecutionRole.Arn'
-  #     Runtime: python3.7
-  #     Code:
-  #       S3Bucket: !GetAtt 'CopyLambdaStack.Outputs.LambdaZipsBucket'
-  #       S3Key: !Sub "${QSS3KeyPrefix}functions/packages/admin_failover/lambda.zip"
-  #     MemorySize: 3008
-  #     VpcConfig:
-  #       SecurityGroupIds:
-  #         - !Ref ISESecurityGroup
-  #       SubnetIds:
-  #         - !Ref PrivateSubnet1A
-  #         - !Ref PrivateSubnet1B
   #cloudwatch alarms
   ISENode1AutorecoverAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -1190,11 +1009,7 @@ Resources:
     - DeploymentStateMachine
     Properties:
       ServiceToken: !GetAtt DeploymentStateMachineLambda.Arn
-      #Region: !Ref AmiRegion
-      #AmiId: !Ref AmiId
       WaitHandle: !Ref DeploymentWaitHandle
-      #QSTagKey: !Ref QSTagKey
-      #QSTagValue: !Ref QSTagValue
   DeploymentStateMachineLambda:
     Type: AWS::Lambda::Function
     Properties:
@@ -1217,7 +1032,7 @@ Resources:
           def handler(event, context):
             timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
             timer.start()
-            print('Received event: %s' % json.dumps(event))
+            logging.info('Received event: %s' % json.dumps(event))
             status = cfnresponse.SUCCESS
             responseData = {}
             try:
@@ -1228,7 +1043,7 @@ Resources:
                 )
                 responseData = {'executionArn': response['executionArn']}
               else:
-                print('Nothing to do')
+                logging.info('Nothing to do')
             except Exception as e:
               logging.error('Exception: %s' % e, exc_info=True)
               status = cfnresponse.FAILED
@@ -1250,20 +1065,6 @@ Resources:
       Name: SPAN_IP
       Type: String
       Value: !Ref ISENode2IP
-  ISENode1HostnameParameter:
-    Type: AWS::SSM::Parameter
-    Properties: 
-      Description: Hostname of Primary PAN
-      Name: PPAN_Hostname
-      Type: String
-      Value: !Ref ISENode1Hostname
-  ISENode2HostnameParameter:
-    Type: AWS::SSM::Parameter
-    Properties: 
-      Description: Hostname of Secondary PAN
-      Name: SPAN_Hostname
-      Type: String
-      Value: !Ref ISENode2Hostname
   ISENode2FqdnParameter:
     Type: AWS::SSM::Parameter
     Properties: 
@@ -1277,7 +1078,7 @@ Resources:
       Description: Sync status of deployment
       Name: SyncStatus
       Type: String
-      Value: !Ref SyncStatus
+      Value: PENDING
    
   DeploymentStateMachineLambdaRole:
     Type: AWS::IAM::Role
@@ -1310,7 +1111,7 @@ Resources:
     - SetPrimaryPANLambda
     - RegisterSecondaryNodeLambda
     - CheckSyncStatusLambda
-    - ValidateDeploymentLambda
+    - CallbackLambda
     Properties:
       RoleArn: !GetAtt StatesExecutionRole.Arn
       DefinitionString: !Sub |-
@@ -1384,19 +1185,24 @@ Resources:
                 {
                   "Variable": "$.PrimaryState",
                   "StringEquals": "running",
-                  "Next": "Validate deployment"
+                  "Next": "Send Cfn Response"
                 },
                 {
                   "Variable": "$.PrimaryState",
                   "StringEquals": "pending",
                   "Next": "Wait for Sync to complete"
+                },
+                {
+                  "Variable": "$.PrimaryState",
+                  "StringEquals": "failure",
+                  "Next": "Send Cfn Response"
                 }
               ],
               "Default": "Wait for Sync to complete"
             },
-            "Validate deployment": {
+            "Send Cfn Response": {
               "Type": "Task",
-              "Resource": "${ValidateDeploymentLambda.Arn}",
+              "Resource": "${CallbackLambda.Arn}",
               "InputPath": "$",
               "End": true,
               "Retry": [
@@ -1460,9 +1266,13 @@ Resources:
           import time
           from botocore.vendored import requests
           import boto3
+          import sys
           
-          def handler(event, context):
-              def get_ssm_parameter(ssm_client, ssm_parameter_name):
+          logging.basicConfig(stream = sys.stdout)
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          
+          def get_ssm_parameter(ssm_client, ssm_parameter_name,WithDecryption=False):
                   param_value = ssm_client.get_parameter(
                   Name=ssm_parameter_name,
                   WithDecryption=False
@@ -1470,7 +1280,7 @@ Resources:
                  
                   return param_value.get('Parameter').get('Value')
               
-              def set_ssm_parameter(ssm_client, ssm_parameter_name, value, Overwrite=True, Type="String"):
+          def set_ssm_parameter(ssm_client, ssm_parameter_name, value, Overwrite=True, Type="String"):
                   response = ssm_client.put_parameter(
                   Name=ssm_parameter_name,
                   Value=value,
@@ -1480,9 +1290,17 @@ Resources:
                  
                   return response
                   
+          def timeout(event, context):
+                  logging.error('Execution is about to time out, sending failure response to CloudFormation')
+                  requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
+                  response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                  sys.exit(1)
+          
+          def handler(event, context):
               ssm_client = boto3.client('ssm',region_name="us-east-1")
+              timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
               try:
-                  print("#Code to extract ISE instance IP - start#")
+                  logger.info("#Code to extract ISE instance IP - start#")
                   value_list = ["isenode01","isenode02"]
                   client = boto3.client("ec2",region_name="us-east-1")
                   custom_filter = [{
@@ -1495,28 +1313,28 @@ Resources:
                       for instance in i["Instances"]:
                           if instance["State"]["Name"] == "running":
                               hostprivateIP.append(instance["PrivateIpAddress"])
-                  print("Installed ISE Instance IPs are - {}".format(hostprivateIP))
-                  print("#Code to extract ISE instance IP - end#")
+                  logger.info("Installed ISE Instance IPs are - {}".format(hostprivateIP))
+                  logger.info("#Code to extract ISE instance IP - end#")
                   
-                  print("#Setting SSM parameters...")
+                  logger.info("#Setting SSM parameters...")
                   set_ssm_parameter(ssm_client,"PPAN_IP",hostprivateIP[0])
                   set_ssm_parameter(ssm_client,"SPAN_IP",hostprivateIP[1])
                   set_ssm_parameter(ssm_client,"ADMIN_USERNAME","admin")
-                  set_ssm_parameter(ssm_client,"ADMIN_PASSWORD","Test123")
+                  set_ssm_parameter(ssm_client,"ADMIN_PASSWORD","Test123",Type="SecureString")
                   
-                  print("#Retriving SSM parameters...")
+                  logger.info("#Retriving SSM parameters...")
                   PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
                   SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
                   ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
-                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
+                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD",WithDecryption=True)
                   API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
                   API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
                   
-                  print("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
-                  print("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
-                  print("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
-                  print("API_AUTH : {}".format(API_AUTH))
-                  print("API_HEADER : {}".format(API_HEADER))
+                  logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
+                  logger.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
+                  logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
+                  logger.info("API_AUTH : {}".format(API_AUTH))
+                  logger.info("API_HEADER : {}".format(API_HEADER))
                   
                   data = {}
                   nodes_to_check = [PPAN_IP, SPAN_IP]
@@ -1526,23 +1344,27 @@ Resources:
                           url = 'https://{}/api/v1/deployment/node'.format(ip)
                           try:
                               resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
-                              print("API response for {} is {} ".format(ip, resp.text))
+                              logger.info("API response for {} is {} ".format(ip, resp.text))
                               if resp.status_code == 200:
                                   nodes_to_check.remove(ip)
-                                  print("ISE - {} is up and running".format(ip))
+                                  logger.info("ISE - {} is up and running".format(ip))
                                   if ip == SPAN_IP:
                                       json_resp = json.loads(resp.content.decode("utf-8"))
-                                      print ("Secondary Node FQDN is: {}".format(json_resp["response"][0]['fqdn']))
+                                      logger.info("Secondary Node FQDN is: {}".format(json_resp["response"][0]['fqdn']))
                                       set_ssm_parameter(ssm_client,"Secondary_FQDN",json_resp["response"][0]['fqdn'])
                           except Exception as e:
                               logging.error('Exception: %s' % e, exc_info=True)
-                              print("Exception occured while executing get node details api for {}".format(PPAN_IP))
+                              logger.error("Exception occured while executing get node details api for {}".format(PPAN_IP))
                               retries -= 1
                               time.sleep(2)
+                              
                   if nodes_to_check:
-                      return "pending"
-                  else:
-                      return "running"
+                     timer.cancel()
+                     return "pending"
+                      
+                  timer.cancel()
+                  return "running"
+                  
               except Exception as e:
                 logging.error('Exception: %s' % e, exc_info=True)
   
@@ -1597,10 +1419,17 @@ Resources:
           import time
           from botocore.vendored import requests
           import boto3
+          import sys
           
-          def handler(event, context):
+          logging.basicConfig(stream = sys.stdout)
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          
+          class PromoteToPrimaryFailed(Exception):
+            """Raised when the Set Primary PAN Lambda is failed"""
+            pass
             
-            def get_ssm_parameter(ssm_client, ssm_parameter_name):
+          def get_ssm_parameter(ssm_client, ssm_parameter_name,WithDecryption=False):
                   param_value = ssm_client.get_parameter(
                   Name=ssm_parameter_name,
                   WithDecryption=False
@@ -1608,37 +1437,49 @@ Resources:
                  
                   return param_value.get('Parameter').get('Value')
                   
+          def timeout(event, context):
+                  logging.error('Execution is about to time out, sending failure response to CloudFormation')
+                  requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
+                  response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                  sys.exit(1)
+          
+          def handler(event, context):
+                  
             ssm_client = boto3.client('ssm',region_name="us-east-1")
-            
-            print("#Retriving SSM parameters...")
+            timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
+            logger.info("#Retriving SSM parameters...")
             PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
             SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
             ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
-            ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
+            ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD",WithDecryption=True)
             API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
             API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
                   
-            print("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
-            print("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
-            print("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
-            print("API_AUTH : {}".format(API_AUTH))
-            print("API_HEADER : {}".format(API_HEADER))
+            logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
+            logger.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
+            logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
+            logger.info("API_AUTH : {}".format(API_AUTH))
+            logger.info("API_HEADER : {}".format(API_HEADER))
             
             try:
               url = 'https://{}/api/v1/deployment/primary'.format(PPAN_IP)
               data = {}
               resp = requests.post(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
               
-              print("API Response is : {}".format(resp))
+              logger.info("API Response is : {}".format(resp))
               if resp.status_code == 200:
-                  if "success" in resp:
-                      print("##### Standalone to Primary Successful on {} #####".format(PPAN_IP))
+                  logger.info("##### Standalone to Primary Successful on {} #####".format(PPAN_IP))
+                  timer.cancel()
                   return "running"
-              else:
-                return "pending"
+              raise PromoteToPrimaryFailed({"Setting ISE Node to Primary Failed"})
                           
             except Exception as e:
+              requests_data=json.dumps(dict(Status='FAILURE',Reason='Setting ISE Node to Primary Failed',UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
+              response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+              logger.info(response)
               logging.error('Exception: %s' % e, exc_info=True)
+              timer.cancel()
+
 
 
       Handler: index.handler
@@ -1692,10 +1533,17 @@ Resources:
           import time
           from botocore.vendored import requests
           import boto3
+          import sys
           
-          def handler(event, context):
+          logging.basicConfig(stream = sys.stdout)
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          
+          class RegisterSecondaryNodeFailed(Exception):
+            """Raised when the Set Primary PAN Lambda is failed"""
+            pass
             
-              def get_ssm_parameter(ssm_client, ssm_parameter_name):
+          def get_ssm_parameter(ssm_client, ssm_parameter_name,WithDecryption=False):
                   param_value = ssm_client.get_parameter(
                   Name=ssm_parameter_name,
                   WithDecryption=False
@@ -1703,23 +1551,30 @@ Resources:
                  
                   return param_value.get('Parameter').get('Value')
                   
+          def timeout(event, context):
+                  logging.error('Execution is about to time out, sending failure response to CloudFormation')
+                  requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
+                  response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                  sys.exit(1)
+          
+          def handler(event, context):
               ssm_client = boto3.client('ssm',region_name="us-east-1")
-            
-              print("#Retriving SSM parameters...")
+              timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
+              logger.info("#Retriving SSM parameters...")
               PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
               SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
               Secondary_FQDN = get_ssm_parameter(ssm_client,"Secondary_FQDN")
               ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
-              ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
+              ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD",WithDecryption=True)
               API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
               API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
                   
-              print("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
-              print("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
-              print("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
-              print("API_AUTH : {}".format(API_AUTH))
-              print("API_HEADER : {}".format(API_HEADER))
-              print("# Register Secondary node to deployment - start...")
+              logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
+              logger.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
+              logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
+              logger.info("API_AUTH : {}".format(API_AUTH))
+              logger.info("API_HEADER : {}".format(API_HEADER))
+              logger.info("# Register Secondary node to deployment - start...")
               try:
                 roles_enabled = ["SecondaryAdmin","SecondaryMonitoring"]
                 service_enabled = ["Session", "Profiler"]
@@ -1732,18 +1587,23 @@ Resources:
                         "roles": roles_enabled,
                         "services": service_enabled,
                         }
-                print('Url: {}, Data: {}'.format(url, data))
+                logger.info('Url: {}, Data: {}'.format(url, data))
           
                 resp = requests.post(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
-                print('Register secondary response: {}, {}'.format(resp.status_code, resp.text))
+                logger.info('Register secondary response: {}, {}'.format(resp.status_code, resp.text))
                 if resp.status_code == 200:
-                    print("Register Secondary node is successfull, API response is {}".format(resp.text))
+                    logger.info("Register Secondary node is successfull, API response is {}".format(resp.text))
+                    timer.cancel()
                     return "running"
-                else:
-                    print("Register Secondary node failed, API response is {}".format(resp.text))
-                    return "pending"
+                raise RegisterSecondaryNodeFailed({"Register Secondary node to form deployment Failed"})
+                    
               except Exception as e:
+                requests_data=json.dumps(dict(Status='FAILURE',Reason='Secondary Node Registration Failed',UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
+                response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                logger.info(response)
+                timer.cancel()
                 logging.error('Exception: %s' % e, exc_info=True)
+
 
       Handler: index.handler
       Role: !GetAtt RegisterSecondaryNodeExecutionRole.Arn
@@ -1796,16 +1656,21 @@ Resources:
           import time
           from botocore.vendored import requests
           import boto3
+          import sys
           
-          def handler(event, context):
-              def get_ssm_parameter(ssm_client, ssm_parameter_name):
+          logging.basicConfig(stream = sys.stdout)
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          
+          def get_ssm_parameter(ssm_client, ssm_parameter_name,WithDecryption=False):
                   param_value = ssm_client.get_parameter(
                   Name=ssm_parameter_name,
                   WithDecryption=False
               )
                  
                   return param_value.get('Parameter').get('Value')
-              def set_ssm_parameter(ssm_client, ssm_parameter_name, value, Overwrite=True, Type="String"):
+                  
+          def set_ssm_parameter(ssm_client, ssm_parameter_name, value, Overwrite=True, Type="String"):
                   response = ssm_client.put_parameter(
                   Name=ssm_parameter_name,
                   Value=value,
@@ -1815,39 +1680,61 @@ Resources:
                  
                   return response
                   
+          def timeout(event, context):
+                  logging.error('Execution is about to time out, sending failure response to CloudFormation')
+                  requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
+                  response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                  sys.exit(1)
+          
+          def handler(event, context):
+              timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
               ssm_client = boto3.client('ssm',region_name="us-east-1")
               try:
-                  print("#Retriving SSM parameters...")
+                  logger.info("#Retriving SSM parameters...")
                   PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
                   ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
-                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
+                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD",WithDecryption=True)
                   API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
                   API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
                   
-                  print("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
-                  print("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
-                  print("API_AUTH : {}".format(API_AUTH))
-                  print("API_HEADER : {}".format(API_HEADER))
+                  logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
+                  logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
+                  logger.info("API_AUTH : {}".format(API_AUTH))
+                  logger.info("API_HEADER : {}".format(API_HEADER))
                   
                   data = {}
                   
                   url = 'https://{}/api/v1/deployment/node'.format(PPAN_IP)
                   try:
                       resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
-                      print("API response for checking node sync status and roles is: {} ".format(resp.text))
+                      logger.info("API response for checking node sync status and roles is: {} ".format(resp.text))
                       if resp.status_code == 200:
                         json_resp = json.loads(resp.content.decode("utf-8"))
-                        if json_resp["response"][0]['nodeStatus'] == "Connected" and json_resp["response"][1]['nodeStatus'] == "Connected":
+                        if json_resp["response"][1]['nodeStatus'] == "Connected":
                           set_ssm_parameter(ssm_client,"SyncStatus","SYNC_COMPLETED")
+                          timer.cancel()
                           return "running"
+                        elif json_resp["response"][1]['nodeStatus'] == "RegistrationFailed":
+                          set_ssm_parameter(ssm_client,"SyncStatus","SYNC_FAILED")
+                          requests_data=json.dumps(dict(Status='FAILURE',Reason='Secondary Node Sync or Registration failed',UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
+                          response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                          logger.info(response)
+                          timer.cancel()
+                          return "failure"
+                        else:
+                          timer.cancel()
+                          return "pending"
+                         
                   except Exception as e:
                       logging.error('Exception: %s' % e, exc_info=True)
-                      print("Exception occured while executing get node details api for {}".format(PPAN_IP))
+                      logger.info("Exception occured while executing get node details api for {}".format(PPAN_IP))
+                      timer.cancel()
                       return "pending"
                       
               except Exception as e:
+                timer.cancel()
                 logging.error('Exception: %s' % e, exc_info=True)
-
+                return "pending"
 
       Handler: index.handler
       Role: !GetAtt CheckSyncStatusExecutionRole.Arn
@@ -1887,115 +1774,69 @@ Resources:
               - ec2:CreateNetworkInterface
             Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*
 
-  ValidateDeploymentLambda:
+  # Lambda - Sends Callback to the CloudFormation Wait Condition, signaling whether the Deployment was created successfully
+  CallbackLambda:
     Type: AWS::Lambda::Function
     Properties:
-      Timeout: 300
+      Description: Sends callback to CloudFormation to continue
       Code:
-        ZipFile: !Sub | 
+        ZipFile: |
           import json
           import logging
           import threading
-          import time
           from botocore.vendored import requests
-          import boto3
           import sys
+          import boto3
           
-          def handler(event, context):
-              def timeout(event, context):
-                  logging.error('Execution is about to time out, sending failure response to CloudFormation')
-                  requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
-                  response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
-                  sys.exit(1)
-                  
-              def get_ssm_parameter(ssm_client, ssm_parameter_name):
+          logging.basicConfig(stream = sys.stdout)
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          
+          def timeout(event, context):
+            logging.error('Execution is about to time out, sending failure response to CloudFormation')
+            requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
+            response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+            sys.exit(1)
+            
+          def get_ssm_parameter(ssm_client, ssm_parameter_name):
                   param_value = ssm_client.get_parameter(
                   Name=ssm_parameter_name,
                   WithDecryption=False
               )
                  
                   return param_value.get('Parameter').get('Value')
-              def set_ssm_parameter(ssm_client, ssm_parameter_name, value, Overwrite=True, Type="String"):
-                  response = ssm_client.put_parameter(
-                  Name=ssm_parameter_name,
-                  Value=value,
-                  Overwrite=True,
-                  Type="String"
-              )
-                 
-                  return response
+                  
+          def handler(event, context):
+            timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 2, timeout, args=[event, context])
+            timer.start()
+            logger.info('Received event: %s' % json.dumps(event))
+            logger.info(event['ResourceProperties']['WaitHandle'])
+            ssm_client = boto3.client('ssm',region_name="us-east-1")
+            try:
+              logger.info("#Retriving SSM parameters...")
+              SYNC_STATUS = get_ssm_parameter(ssm_client,"SyncStatus")
+              if SYNC_STATUS == 'SYNC_COMPLETED':
+                logger.info("Sync is successful")
+                requests_data=json.dumps(dict(Status='SUCCESS',Reason='Deployment creation successful',UniqueId='ISENodeStates',Data='success')).encode('utf-8')
+              else:
+                logger.info("Sync failed")
+                requests_data=json.dumps(dict(Status='FAILURE',Reason='Invalid Deployment Status',UniqueId='ISENodeStates',Data='failure')).encode('utf-8')
+              response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+              logger.info(response)
+              timer.cancel()
+            except Exception as e:
+              logger.info("Sync failed")
+              logging.error('Exception: %s' % e, exc_info=True)
+              requests_data=json.dumps(dict(Status='FAILURE',Reason='Exception: %s' % e,UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
+              response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+              logger.info(response)
+              timer.cancel()
               
-              timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 2, timeout, args=[event, context])
-              timer.start()
-              print('Received event: %s' % json.dumps(event))
-              print(event['ResourceProperties']['WaitHandle'])
-              
-              ssm_client = boto3.client('ssm',region_name="us-east-1")
-              try:
-                  print("#Retriving SSM parameters...")
-                  PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
-                  ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
-                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
-                  API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
-                  API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-                  
-                  print("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
-                  print("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
-                  print("API_AUTH : {}".format(API_AUTH))
-                  print("API_HEADER : {}".format(API_HEADER))
-                  
-                  data = {}
-                  
-                  url = 'https://{}/api/v1/deployment/node'.format(PPAN_IP)
-                  try:
-                      resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
-                      print("API response for checking node sync status and roles is: {} ".format(resp.text))
-                      if resp.status_code == 200:
-                        json_resp = json.loads(resp.content.decode("utf-8"))
-                        if json_resp["response"][0]['nodeStatus'] == "Connected" and json_resp["response"][1]['nodeStatus'] == "Connected":
-                          set_ssm_parameter(ssm_client,"SyncStatus","SYNC_COMPLETED")
-                          requests_data=json.dumps(dict(Status='SUCCESS',Reason='Deployment creation successful',UniqueId='ISENodeStates',Data='success')).encode('utf-8')
-                          response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
-                          print (response)
-                          timer.cancel()
-                          return "running"
-                        else:
-                          requests_data=json.dumps(dict(Status='FAILURE',Reason='Deployment Validation successful',UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
-                          response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
-                          print (response)
-                          timer.cancel()
-                      else:
-                          requests_data=json.dumps(dict(Status='FAILURE',Reason='Deployment Validation successful',UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
-                          response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
-                          print (response)
-                          timer.cancel()  
-                  except Exception as e:
-                      logging.error('Exception: %s' % e, exc_info=True)
-                      print("Exception occured while executing get node details api for {}".format(PPAN_IP))
-                      requests_data=json.dumps(dict(Status='FAILURE',Reason='Exception: %s' % e,UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
-                      response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
-                      print (response)
-                      timer.cancel()
-                      return "pending"
-                      
-              except Exception as e:
-                logging.error('Exception: %s' % e, exc_info=True)
-                requests_data=json.dumps(dict(Status='FAILURE',Reason='Exception: %s' % e,UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
-                response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
-                print (response)
-                timer.cancel()
-      
       Handler: index.handler
-      Role: !GetAtt ValidateDeploymentExecutionRole.Arn
       Runtime: python3.6
-      VpcConfig:
-        SecurityGroupIds:
-          - !Ref ISESecurityGroup
-        SubnetIds:
-          - !Ref PrivateSubnet1A
-          - !Ref PrivateSubnet1B            
-  
-  ValidateDeploymentExecutionRole:
+      Role: !GetAtt CallbackRole.Arn
+      Timeout: 300
+  CallbackRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -2022,8 +1863,7 @@ Resources:
             Action:
               - ec2:DescribeInstance
               - ec2:CreateNetworkInterface
-            Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*
-            
+            Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*            
 Outputs:
   ISENode1ID:
     Description: 'InstanceID of the newly created ISE Node 1 '
