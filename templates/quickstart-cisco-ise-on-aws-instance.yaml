@@ -562,15 +562,15 @@ Parameters:
     Default: quickstart-cisco-ise-on-aws/
     Description: "S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/)."
     Type: String
-  ISENode1IP:
-    Type: String
-    Default: 127.0.0.1
-  ISENode2IP:
-    Type: String
-    Default: 127.0.0.1
-  ISENode2Fqdn:
-    Type: String
-    Default: iseserver2.example.com
+  # ISENode1IP:
+  #   Type: String
+  #   Default: 127.0.0.1
+  # ISENode2IP:
+  #   Type: String
+  #   Default: 127.0.0.1
+  # ISENode2Fqdn:
+  #   Type: String
+  #   Default: iseserver2.example.com
 
 Conditions:
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
@@ -1057,21 +1057,25 @@ Resources:
       Description: IP Address of Primary PAN
       Name: PPAN_IP
       Type: String
-      Value: !Ref ISENode1IP
+      Value: !GetAtt 
+        - ISENode1
+        - PrivateIp
   ISENode2IPParameter:
     Type: AWS::SSM::Parameter
     Properties: 
       Description: IP Address of Secondary PAN
       Name: SPAN_IP
       Type: String
-      Value: !Ref ISENode2IP
+      Value: !GetAtt 
+      - ISENode2
+      - PrivateIp
   ISENode2FqdnParameter:
     Type: AWS::SSM::Parameter
     Properties: 
       Description: FQDN of Secondary PAN
       Name: Secondary_FQDN
       Type: String
-      Value: !Ref ISENode2Fqdn
+      Value: !Join [".",[!Ref Node2Hostname, !Ref DNSDomain]]
   SyncStatusParameter:
     Type: AWS::SSM::Parameter
     Properties: 
@@ -1079,7 +1083,6 @@ Resources:
       Name: SyncStatus
       Type: String
       Value: PENDING
-   
   DeploymentStateMachineLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -1300,28 +1303,10 @@ Resources:
               ssm_client = boto3.client('ssm',region_name="us-east-1")
               timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
               try:
-                  logger.info("#Code to extract ISE instance IP - start#")
-                  value_list = ["isenode01","isenode02"]
-                  client = boto3.client("ec2",region_name="us-east-1")
-                  custom_filter = [{
-                      'Name':'tag:Testnode', 
-                      'Values': value_list}]
-                  response = client.describe_instances(Filters=custom_filter)
-                  hostprivateIP = []
-                  # fetchin private IP address of the running instances
-                  for i in response["Reservations"]:
-                      for instance in i["Instances"]:
-                          if instance["State"]["Name"] == "running":
-                              hostprivateIP.append(instance["PrivateIpAddress"])
-                  logger.info("Installed ISE Instance IPs are - {}".format(hostprivateIP))
-                  logger.info("#Code to extract ISE instance IP - end#")
-                  
+              
                   logger.info("#Setting SSM parameters...")
-                  set_ssm_parameter(ssm_client,"PPAN_IP",hostprivateIP[0])
-                  set_ssm_parameter(ssm_client,"SPAN_IP",hostprivateIP[1])
                   set_ssm_parameter(ssm_client,"ADMIN_USERNAME","admin")
                   set_ssm_parameter(ssm_client,"ADMIN_PASSWORD","Test123",Type="SecureString")
-                  
                   logger.info("#Retriving SSM parameters...")
                   PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
                   SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
@@ -1329,13 +1314,14 @@ Resources:
                   ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD",WithDecryption=True)
                   API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
                   API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+                  Secondary_FQDN = get_ssm_parameter(ssm_client,"Secondary_FQDN")
                   
                   logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
                   logger.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
                   logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
                   logger.info("API_AUTH : {}".format(API_AUTH))
                   logger.info("API_HEADER : {}".format(API_HEADER))
-                  
+                  logger.info("Secondary Polcy Administration node fqdn : {}".format(Secondary_FQDN))
                   data = {}
                   nodes_to_check = [PPAN_IP, SPAN_IP]
                   retries = 5
@@ -1348,10 +1334,6 @@ Resources:
                               if resp.status_code == 200:
                                   nodes_to_check.remove(ip)
                                   logger.info("ISE - {} is up and running".format(ip))
-                                  if ip == SPAN_IP:
-                                      json_resp = json.loads(resp.content.decode("utf-8"))
-                                      logger.info("Secondary Node FQDN is: {}".format(json_resp["response"][0]['fqdn']))
-                                      set_ssm_parameter(ssm_client,"Secondary_FQDN",json_resp["response"][0]['fqdn'])
                           except Exception as e:
                               logging.error('Exception: %s' % e, exc_info=True)
                               logger.error("Exception occured while executing get node details api for {}".format(PPAN_IP))
