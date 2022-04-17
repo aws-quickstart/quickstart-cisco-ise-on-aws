@@ -1,3 +1,15 @@
 // Include any postdeployment steps here, such as steps necessary to test that the deployment was successful. If there are no postdeployment steps, leave this file empty.
 
 == Postdeployment steps
+After deployment, you must do the following:
+
+* Attach the workload VPCs to the on-premise network via https://docs.aws.amazon.com/vpn/latest/s2svpn/index.html[AWS Site-to-Site VPN^] or the like.
+* Update the VPC route table for the workload subnets. For more information, see https://docs.aws.amazon.com/vpc/latest/userguide/WorkWithRouteTables.html#AddRemoveRoutes[Add and remove routes from a route table^].
+
+== Resources
+* http://cs.co/ise-resources[{partner-product-short-name} & NAC Resources^]
+* http://cs.co/ise-community[{partner-product-short-name} Community^]
+* http://cs.co/ise-webinars[{partner-product-short-name} Webinars^]
+* http://cs.co/ise-videos[{partner-product-short-name} YouTube Channel^]
+* http://cs.co/ise-licensing[{partner-product-short-name} Licensing Guide^]
+* http://cs.co/ise-api[{partner-product-short-name} API SDK^]
