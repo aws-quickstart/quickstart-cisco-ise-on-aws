@@ -1,3 +1,37 @@
 //Include any predeployment steps here, such as signing up for a Marketplace AMI or making any changes to a partner account. If there are no predeployment steps, leave this file empty.
 
 == Predeployment steps
+
+=== Prepare your AWS account
+==== AWS Marketplace
+* Subscribe to {marketplace_listing_url}[{marketplace_subscription} in AWS Marketplace^].
+
+==== Service Quotas
+You might need to request service quotas increases if your existing workloads use these resources and if this Quick Start deployment could result in exceeding your current quotas. The https://console.aws.amazon.com/servicequotas/home[Service Quotas console^] displays your usage and quotas for some aspects of some services. If necessary, request service quota increases for the following resources in the Region where you plan to deploy {partner-product-short-name}.
+
+For more information, see https://docs.aws.amazon.com/servicequotas/latest/userguide/intro.html[What is Service Quotas?^] and https://docs.aws.amazon.com/general/latest/gr/aws_service_limits.html[AWS service quotas^].
+
+[width=75%]
+[cols="3,1"]
+|===
+|Resource |This deployment uses
+
+// Space needed to maintain table headers
+|VPCs | 1
+|Elastic IP addresses | 2
+|Security groups | 1
+|AWS Identity and Access Management (IAM) roles | 1
+|EC2 instances | 2
+|AWS Lambda functions | 1
+|AWS Secrets Manager secrets| 1
+|CloudWatch event rules| 1
+|EC2 key pairs | 1
+
+|===
+
+
+=== Prepare your {partner-company-name} account
+* See {partner-product-short-name} licensing info at link:#_costs_and_licenses[Costs and Licenses].
+
+=== Prepare for the deployment
+* Create At least one Amazon EC2 key pair: Ensure that at least one Amazon EC2 key pair exists in your AWS account in the Region where you plan to deploy {partner-product-short-name}. Make note of the key pair name. For more information, refer to https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-console-create-keypair.html[Creating an EC2 key pair^].
