@@ -607,7 +607,7 @@ Resources:
       SecurityGroupIngress:
         - IpProtocol: -1
           Description: "Allow Internal traffic"
-          CidrIp: '0.0.0.0/0'
+          CidrIp: !Ref VPCCIDR
       VpcId: !Ref VPCID
       
   IseLaunchTemplate:
