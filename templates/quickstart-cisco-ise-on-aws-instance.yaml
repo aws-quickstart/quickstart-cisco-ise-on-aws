@@ -32,7 +32,7 @@ Parameters:
   ERSapi:
     Description: Do you wish to enable ERS?
     Type: String
-    Default: 'no'
+    Default: 'yes'
     AllowedValues:
       - 'yes'
       - 'no'
@@ -40,7 +40,7 @@ Parameters:
   OpenAPI:
     Description: Do you wish to enable OpenAPI?
     Type: String
-    Default: 'no'
+    Default: 'yes'
     AllowedValues:
       - 'yes'
       - 'no'
@@ -81,6 +81,7 @@ Parameters:
     Default: 10.0.32.0/19
     Description: CIDR block for private subnet 2 located in Availability Zone 2.
     Type: String
+
   Node1Hostname:
     Description: >-
       Enter the hostname. This field only supports alphanumeric characters and
@@ -561,6 +562,7 @@ Parameters:
     Default: quickstart-cisco-ise-on-aws/
     Description: "S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/)."
     Type: String
+
 Conditions:
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
 Mappings:
@@ -603,19 +605,11 @@ Resources:
     Properties:
       GroupDescription: Enable HTTP, HTTPS and SSH to the ISE Server
       SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: '0.0.0.0/0'
-        - IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
-          CidrIp: '0.0.0.0/0'
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: '0.0.0.0/0'
+        - IpProtocol: -1
+          Description: "Allow Internal traffic"
+          CidrIp: !Ref VPCCIDR
       VpcId: !Ref VPCID
+      
   IseLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
@@ -642,8 +636,6 @@ Resources:
             Tags:
               - Key: "Name"
                 Value: "ISENode"
-        
-      
   ISENode1:
     Type: 'AWS::EC2::Instance'
     Properties:
@@ -652,8 +644,8 @@ Resources:
         Version: !GetAtt 'IseLaunchTemplate.LatestVersionNumber'
       SubnetId: !Ref PrivateSubnet1A
       Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-00_ISE_cluster_node1
+        - Key: "Testnode"
+          Value: "isenode01"
       UserData: !Base64 
           'Fn::Join':
             - ''
@@ -697,7 +689,6 @@ Resources:
               - pxgrid_cloud=
               - !Ref PXGridCloud
               - |+
-
   ISENode2:
     Type: 'AWS::EC2::Instance'
     Properties:
@@ -706,8 +697,8 @@ Resources:
         Version: !GetAtt 'IseLaunchTemplate.LatestVersionNumber'
       SubnetId: !Ref PrivateSubnet1B
       Tags:
-        - Key: Name
-          Value: !Sub ${AWS::StackName}-00_ISE_cluster_node2
+        - Key: "Testnode"
+          Value: "isenode02"
       UserData: !Base64 
           'Fn::Join':
             - ''
@@ -752,6 +743,7 @@ Resources:
               - !Ref PXGridCloud
               - |+
 
+  #Route53 configuration
   ForwardDNS: 
     Type: 'AWS::Route53::HostedZone'
     Properties: 
@@ -795,10 +787,8 @@ Resources:
           - - !Ref Node1Hostname
             - !Ref DNSDomain
         ResourceRecords: 
-          - !Join [
-            ".",
-            [!Select [0, !Split ['.', !Ref PrivateSubnet1CIDR]], !Select [1, !Split ['.', !Ref PrivateSubnet1CIDR]], !Select [2, !Split ['.', !Ref PrivateSubnet1CIDR]], '4']
-          ]
+          - !GetAtt ISENode1.PrivateIp
+          
         Type: A
         TTL: "300"
       - Name: !Join
@@ -806,10 +796,8 @@ Resources:
           - - !Ref Node2Hostname
             - !Ref DNSDomain
         ResourceRecords: 
-          - !Join [
-            ".",
-            [!Select [0, !Split ['.', !Ref PrivateSubnet2CIDR]], !Select [1, !Split ['.', !Ref PrivateSubnet2CIDR]], !Select [2, !Split ['.', !Ref PrivateSubnet2CIDR]], '4']
-          ]
+          - !GetAtt ISENode2.PrivateIp
+          
         Type: A
         TTL: "300"
   ISEReverseDNSRecordNode1:
@@ -972,61 +960,6 @@ Resources:
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
 
-  LambdaBasicExecutionRole:
-    Metadata:
-      cfn-lint:
-        config:
-          ignore_checks:
-            - EIAMPolicyActionWildcard
-          ignore_reasons:
-            EIAMPolicyActionWildcard: Multiple actions are needed for manipulation
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-        - Effect: Allow
-          Principal:
-            Service: lambda.amazonaws.com
-          Action: sts:AssumeRole
-          Condition: {}
-      Path: /
-      Policies:
-        - PolicyName: !Sub ${AWS::StackName}-PSNfailoverlambdaPolicy
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: !Sub arn:${AWS::Partition}:logs:*:*:*
-              - Effect: Allow
-                Action:
-                  - ec2:Describe*
-                Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*
-              - Effect: Allow
-                Action:
-                  - secretsmanager:DescribeSecret
-                  - secretsmanager:ListSecretVersionIds
-                  - secretsmanager:GetResourcePolicy
-                  - secretsmanager:GetSecretValue
-                  - secretsmanager:GetRandomPassword
-                Resource: !Sub arn:${AWS::Partition}:secretsmanager:*:*:*:*
-
-  #The lambda needs to be written
-  PSNLambda:
-    Type: AWS::Lambda::Function
-    Properties:
-      Handler: lambda_function.main
-      Timeout: 60
-      Role: !GetAtt 'LambdaBasicExecutionRole.Arn'
-      Runtime: python3.7
-      Code:
-        S3Bucket: !GetAtt 'CopyLambdaStack.Outputs.LambdaZipsBucket'
-        S3Key: !Sub "${QSS3KeyPrefix}functions/packages/admin_failover/lambda.zip"
-      MemorySize: 3008
-  #Route53 configuration
   #cloudwatch alarms
   ISENode1AutorecoverAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -1060,6 +993,850 @@ Resources:
       Statistic: Minimum
       ComparisonOperator: GreaterThanThreshold
       Threshold: 0
+  # Set up ISE Deployment resources
+  ISEDeployment:
+    Type: Custom::ISEDeployment
+    DependsOn:
+    - DeploymentStateMachine
+    Properties:
+      ServiceToken: !GetAtt DeploymentStateMachineLambda.Arn
+      WaitHandle: !Ref DeploymentWaitHandle
+  DeploymentStateMachineLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Invokes Lambda that kicks off deployment state machine
+      Handler: index.handler
+      Runtime: python3.6
+      Role: !GetAtt DeploymentStateMachineLambdaRole.Arn
+      Timeout: 300
+      Code:
+        ZipFile: !Sub | 
+          import boto3
+          import json
+          import logging
+          import threading
+          import cfnresponse
+          sfn = boto3.client('stepfunctions')
+          def timeout(event, context):
+            logging.error('Execution is about to time out, sending failure response to CloudFormation')
+            cfnresponse.send(event, context, cfnresponse.FAILED, {}, None)
+          def handler(event, context):
+            timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
+            timer.start()
+            logging.info('Received event: %s' % json.dumps(event))
+            status = cfnresponse.SUCCESS
+            responseData = {}
+            try:
+              if event['RequestType'] == 'Create':
+                response = sfn.start_execution(
+                  stateMachineArn='${DeploymentStateMachine}',
+                  input=json.dumps(event)
+                )
+                responseData = {'executionArn': response['executionArn']}
+              else:
+                logging.info('Nothing to do')
+            except Exception as e:
+              logging.error('Exception: %s' % e, exc_info=True)
+              status = cfnresponse.FAILED
+            finally:
+              timer.cancel()
+              cfnresponse.send(event, context, status, responseData)
+
+  ISENode1IPParameter:
+    Type: AWS::SSM::Parameter
+    Properties: 
+      Description: IP Address of Primary PAN
+      Name: PPAN_IP
+      Type: String
+      Value: !GetAtt 
+        - ISENode1
+        - PrivateIp
+  ISENode2IPParameter:
+    Type: AWS::SSM::Parameter
+    Properties: 
+      Description: IP Address of Secondary PAN
+      Name: SPAN_IP
+      Type: String
+      Value: !GetAtt 
+      - ISENode2
+      - PrivateIp
+  ISENode2FqdnParameter:
+    Type: AWS::SSM::Parameter
+    Properties: 
+      Description: FQDN of Secondary PAN
+      Name: Secondary_FQDN
+      Type: String
+      Value: !Join [".",[!Ref Node2Hostname, !Ref DNSDomain]]
+  SyncStatusParameter:
+    Type: AWS::SSM::Parameter
+    Properties: 
+      Description: Sync status of deployment
+      Name: SyncStatus
+      Type: String
+      Value: PENDING
+  DeploymentStateMachineLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Path: "/"
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action: 
+            - states:StartExecution
+            Resource: "*"
+  DeploymentStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    DependsOn:
+    - CheckISEStatusLambda
+    - SetPrimaryPANLambda
+    - RegisterSecondaryNodeLambda
+    - CheckSyncStatusLambda
+    - CallbackLambda
+    Properties:
+      RoleArn: !GetAtt StatesExecutionRole.Arn
+      DefinitionString: !Sub |-
+        {
+          "Comment": "A state machine that performs ISE nodes deployment.",
+          "StartAt": "Explicit Wait for ISE boot start",
+          "States": {
+            "Explicit Wait for ISE boot start": {
+              "Type": "Wait",
+              "Seconds": 1500,
+              "Next": "Wait for ISE to come up"
+            },
+            "Check ISE status": {
+              "Type": "Task",
+              "Resource": "${CheckISEStatusLambda.Arn}",
+              "Next": "If ISE is up and running",
+              "ResultPath": "$.PrimaryState",
+              "InputPath": "$"
+            },
+            "If ISE is up and running": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.PrimaryState",
+                  "StringEquals": "pending",
+                  "Next": "Wait for ISE to come up"
+                },
+                {
+                  "Variable": "$.PrimaryState",
+                  "StringEquals": "running",
+                  "Next": "Set Primary PAN"
+                }
+              ],
+              "Default": "Wait for ISE to come up",
+              "InputPath": "$"
+            },
+            "Wait for ISE to come up": {
+              "Type": "Wait",
+              "Seconds": 300,
+              "Next": "Check ISE status"
+            },
+            "Set Primary PAN": {
+              "Type": "Task",
+              "Resource": "${SetPrimaryPANLambda.Arn}",
+              "InputPath": "$",
+              "ResultPath": "$.NodeId",
+              "Next": "Register Secondary Node"
+            },
+            "Register Secondary Node": {
+              "Type": "Task",
+              "Resource": "${RegisterSecondaryNodeLambda.Arn}",
+              "InputPath": "$",
+              "ResultPath": "$.PrimaryState",
+              "Next": "Wait for Sync to complete"
+            },
+            "Wait for Sync to complete": {
+              "Type": "Wait",
+              "Seconds": 240,
+              "Next": "Check Sync status"
+            },
+            "Check Sync status": {
+              "Type": "Task",
+              "Resource": "${CheckSyncStatusLambda.Arn}",
+              "InputPath": "$",
+              "ResultPath": "$.PrimaryState",
+              "Next": "Is Sync complete?"
+            },
+            "Is Sync complete?": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.PrimaryState",
+                  "StringEquals": "running",
+                  "Next": "Send Cfn Response"
+                },
+                {
+                  "Variable": "$.PrimaryState",
+                  "StringEquals": "pending",
+                  "Next": "Wait for Sync to complete"
+                },
+                {
+                  "Variable": "$.PrimaryState",
+                  "StringEquals": "failure",
+                  "Next": "Send Cfn Response"
+                }
+              ],
+              "Default": "Wait for Sync to complete"
+            },
+            "Send Cfn Response": {
+              "Type": "Task",
+              "Resource": "${CallbackLambda.Arn}",
+              "InputPath": "$",
+              "End": true,
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "States.ALL"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ]
+            }
+          }
+        }
+  StatesExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 
+                - !Sub states.${AWS::Region}.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+  StatesExecutionPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: StatesExecutionPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: "lambda:InvokeFunction"
+            Resource: "*"
+      Roles:
+        - !Ref StatesExecutionRole
+
+  # Set up Wait Condition for State Machine
+  DeploymentWaitHandle:
+    Type: AWS::CloudFormation::WaitConditionHandle
+  DeploymentWaitCondition:
+    Type: AWS::CloudFormation::WaitCondition
+    DependsOn: ISEDeployment
+    Properties:
+      Count: 1
+      Handle: !Ref DeploymentWaitHandle
+      Timeout: 7200
+      
+  CheckISEStatusLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Timeout: 300
+      Code:
+        ZipFile: !Sub | 
+          import json
+          import logging
+          import threading
+          import time
+          from botocore.vendored import requests
+          import boto3
+          import sys
+          
+          logging.basicConfig(stream = sys.stdout)
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          
+          def get_ssm_parameter(ssm_client, ssm_parameter_name,WithDecryption=False):
+                  param_value = ssm_client.get_parameter(
+                  Name=ssm_parameter_name,
+                  WithDecryption=False
+              )
+                 
+                  return param_value.get('Parameter').get('Value')
+              
+          def set_ssm_parameter(ssm_client, ssm_parameter_name, value, Overwrite=True, Type="String"):
+                  response = ssm_client.put_parameter(
+                  Name=ssm_parameter_name,
+                  Value=value,
+                  Overwrite=True,
+                  Type="String"
+              )
+                 
+                  return response
+                  
+          def timeout(event, context):
+                  logging.error('Execution is about to time out, sending failure response to CloudFormation')
+                  requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
+                  response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                  sys.exit(1)
+          
+          def handler(event, context):
+              ssm_client = boto3.client('ssm',region_name="us-east-1")
+              timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
+              try:
+              
+                  logger.info("#Setting SSM parameters...")
+                  set_ssm_parameter(ssm_client,"ADMIN_USERNAME","admin")
+                  set_ssm_parameter(ssm_client,"ADMIN_PASSWORD","Test123",Type="SecureString")
+                  logger.info("#Retriving SSM parameters...")
+                  PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
+                  SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
+                  ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
+                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD",WithDecryption=True)
+                  API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
+                  API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+                  Secondary_FQDN = get_ssm_parameter(ssm_client,"Secondary_FQDN")
+                  
+                  logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
+                  logger.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
+                  logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
+                  logger.info("API_AUTH : {}".format(API_AUTH))
+                  logger.info("API_HEADER : {}".format(API_HEADER))
+                  logger.info("Secondary Polcy Administration node fqdn : {}".format(Secondary_FQDN))
+                  data = {}
+                  nodes_to_check = [PPAN_IP, SPAN_IP]
+                  retries = 5
+                  while nodes_to_check and retries:
+                      for ip in nodes_to_check:
+                          url = 'https://{}/api/v1/deployment/node'.format(ip)
+                          try:
+                              resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
+                              logger.info("API response for {} is {} ".format(ip, resp.text))
+                              if resp.status_code == 200:
+                                  nodes_to_check.remove(ip)
+                                  logger.info("ISE - {} is up and running".format(ip))
+                          except Exception as e:
+                              logging.error('Exception: %s' % e, exc_info=True)
+                              logger.error("Exception occured while executing get node details api for {}".format(PPAN_IP))
+                              retries -= 1
+                              time.sleep(2)
+                              
+                  if nodes_to_check:
+                     timer.cancel()
+                     return "pending"
+                      
+                  timer.cancel()
+                  return "running"
+                  
+              except Exception as e:
+                logging.error('Exception: %s' % e, exc_info=True)
+  
+  
+      Handler: index.handler
+      Role: !GetAtt CheckISEStatusExecutionRole.Arn
+      Runtime: python3.6
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref ISESecurityGroup
+        SubnetIds:
+          - !Ref PrivateSubnet1A
+          - !Ref PrivateSubnet1B
+  CheckISEStatusExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+      Path: "/"
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+              - ec2:DescribeInstance
+              - ec2:CreateNetworkInterface
+            Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*
+
+  # Lambda - Sets one node to Primary PAN
+  SetPrimaryPANLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: !Sub | 
+          import json
+          import logging
+          import threading
+          import time
+          from botocore.vendored import requests
+          import boto3
+          import sys
+          
+          logging.basicConfig(stream = sys.stdout)
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          
+          class PromoteToPrimaryFailed(Exception):
+            """Raised when the Set Primary PAN Lambda is failed"""
+            pass
+            
+          def get_ssm_parameter(ssm_client, ssm_parameter_name,WithDecryption=False):
+                  param_value = ssm_client.get_parameter(
+                  Name=ssm_parameter_name,
+                  WithDecryption=False
+              )
+                 
+                  return param_value.get('Parameter').get('Value')
+                  
+          def timeout(event, context):
+                  logging.error('Execution is about to time out, sending failure response to CloudFormation')
+                  requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
+                  response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                  sys.exit(1)
+          
+          def handler(event, context):
+                  
+            ssm_client = boto3.client('ssm',region_name="us-east-1")
+            timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
+            logger.info("#Retriving SSM parameters...")
+            PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
+            SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
+            ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
+            ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD",WithDecryption=True)
+            API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
+            API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+                  
+            logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
+            logger.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
+            logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
+            logger.info("API_AUTH : {}".format(API_AUTH))
+            logger.info("API_HEADER : {}".format(API_HEADER))
+            
+            try:
+              url = 'https://{}/api/v1/deployment/primary'.format(PPAN_IP)
+              data = {}
+              resp = requests.post(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
+              
+              logger.info("API Response is : {}".format(resp))
+              if resp.status_code == 200:
+                  logger.info("##### Standalone to Primary Successful on {} #####".format(PPAN_IP))
+                  timer.cancel()
+                  return "running"
+              raise PromoteToPrimaryFailed({"Setting ISE Node to Primary Failed"})
+                          
+            except Exception as e:
+              requests_data=json.dumps(dict(Status='FAILURE',Reason='Setting ISE Node to Primary Failed',UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
+              response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+              logger.info(response)
+              logging.error('Exception: %s' % e, exc_info=True)
+              timer.cancel()
+
+
+
+      Handler: index.handler
+      Role: !GetAtt SetPrimaryPANLambdaExecutionRole.Arn
+      Runtime: python3.6
+      Timeout: 300
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref ISESecurityGroup
+        SubnetIds:
+          - !Ref PrivateSubnet1A
+          - !Ref PrivateSubnet1B
+  SetPrimaryPANLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+      Path: "/"
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+              - ec2:DescribeInstance
+              - ec2:CreateNetworkInterface
+            Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*
+
+  RegisterSecondaryNodeLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Timeout: 300
+      Code:
+        ZipFile: !Sub | 
+          import json
+          import logging
+          import threading
+          import time
+          from botocore.vendored import requests
+          import boto3
+          import sys
+          
+          logging.basicConfig(stream = sys.stdout)
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          
+          class RegisterSecondaryNodeFailed(Exception):
+            """Raised when the Set Primary PAN Lambda is failed"""
+            pass
+            
+          def get_ssm_parameter(ssm_client, ssm_parameter_name,WithDecryption=False):
+                  param_value = ssm_client.get_parameter(
+                  Name=ssm_parameter_name,
+                  WithDecryption=False
+              )
+                 
+                  return param_value.get('Parameter').get('Value')
+                  
+          def timeout(event, context):
+                  logging.error('Execution is about to time out, sending failure response to CloudFormation')
+                  requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
+                  response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                  sys.exit(1)
+          
+          def handler(event, context):
+              ssm_client = boto3.client('ssm',region_name="us-east-1")
+              timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
+              logger.info("#Retriving SSM parameters...")
+              PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
+              SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
+              Secondary_FQDN = get_ssm_parameter(ssm_client,"Secondary_FQDN")
+              ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
+              ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD",WithDecryption=True)
+              API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
+              API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+                  
+              logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
+              logger.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
+              logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
+              logger.info("API_AUTH : {}".format(API_AUTH))
+              logger.info("API_HEADER : {}".format(API_HEADER))
+              logger.info("# Register Secondary node to deployment - start...")
+              try:
+                roles_enabled = ["SecondaryAdmin","SecondaryMonitoring"]
+                service_enabled = ["Session", "Profiler"]
+                
+                url = 'https://{}/api/v1/deployment/node'.format(PPAN_IP)
+                data = {"allowCertImport": True,
+                        "fqdn": Secondary_FQDN,
+                        "userName": ADMIN_USERNAME,
+                        "password": ADMIN_PASSWORD,
+                        "roles": roles_enabled,
+                        "services": service_enabled,
+                        }
+                logger.info('Url: {}, Data: {}'.format(url, data))
+          
+                resp = requests.post(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
+                logger.info('Register secondary response: {}, {}'.format(resp.status_code, resp.text))
+                if resp.status_code == 200:
+                    logger.info("Register Secondary node is successfull, API response is {}".format(resp.text))
+                    timer.cancel()
+                    return "running"
+                raise RegisterSecondaryNodeFailed({"Register Secondary node to form deployment Failed"})
+                    
+              except Exception as e:
+                requests_data=json.dumps(dict(Status='FAILURE',Reason='Secondary Node Registration Failed',UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
+                response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                logger.info(response)
+                timer.cancel()
+                logging.error('Exception: %s' % e, exc_info=True)
+
+
+      Handler: index.handler
+      Role: !GetAtt RegisterSecondaryNodeExecutionRole.Arn
+      Runtime: python3.6
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref ISESecurityGroup
+        SubnetIds:
+          - !Ref PrivateSubnet1A
+          - !Ref PrivateSubnet1B
+  RegisterSecondaryNodeExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+      Path: "/"
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+              - ec2:DescribeInstance
+              - ec2:CreateNetworkInterface
+            Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*            
+  # Lambda - Describes Primary PAN status. In this case, used for starting and stopping instances
+
+  CheckSyncStatusLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Timeout: 300
+      Code:
+        ZipFile: !Sub | 
+          import json
+          import logging
+          import threading
+          import time
+          from botocore.vendored import requests
+          import boto3
+          import sys
+          
+          logging.basicConfig(stream = sys.stdout)
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          
+          def get_ssm_parameter(ssm_client, ssm_parameter_name,WithDecryption=False):
+                  param_value = ssm_client.get_parameter(
+                  Name=ssm_parameter_name,
+                  WithDecryption=False
+              )
+                 
+                  return param_value.get('Parameter').get('Value')
+                  
+          def set_ssm_parameter(ssm_client, ssm_parameter_name, value, Overwrite=True, Type="String"):
+                  response = ssm_client.put_parameter(
+                  Name=ssm_parameter_name,
+                  Value=value,
+                  Overwrite=True,
+                  Type="String"
+              )
+                 
+                  return response
+                  
+          def timeout(event, context):
+                  logging.error('Execution is about to time out, sending failure response to CloudFormation')
+                  requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
+                  response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                  sys.exit(1)
+          
+          def handler(event, context):
+              timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
+              ssm_client = boto3.client('ssm',region_name="us-east-1")
+              try:
+                  logger.info("#Retriving SSM parameters...")
+                  PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
+                  ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
+                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD",WithDecryption=True)
+                  API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
+                  API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+                  
+                  logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
+                  logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
+                  logger.info("API_AUTH : {}".format(API_AUTH))
+                  logger.info("API_HEADER : {}".format(API_HEADER))
+                  
+                  data = {}
+                  
+                  url = 'https://{}/api/v1/deployment/node'.format(PPAN_IP)
+                  try:
+                      resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
+                      logger.info("API response for checking node sync status and roles is: {} ".format(resp.text))
+                      if resp.status_code == 200:
+                        json_resp = json.loads(resp.content.decode("utf-8"))
+                        if json_resp["response"][1]['nodeStatus'] == "Connected":
+                          set_ssm_parameter(ssm_client,"SyncStatus","SYNC_COMPLETED")
+                          timer.cancel()
+                          return "running"
+                        elif json_resp["response"][1]['nodeStatus'] == "RegistrationFailed":
+                          set_ssm_parameter(ssm_client,"SyncStatus","SYNC_FAILED")
+                          requests_data=json.dumps(dict(Status='FAILURE',Reason='Secondary Node Sync or Registration failed',UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
+                          response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                          logger.info(response)
+                          timer.cancel()
+                          return "failure"
+                        else:
+                          timer.cancel()
+                          return "pending"
+                         
+                  except Exception as e:
+                      logging.error('Exception: %s' % e, exc_info=True)
+                      logger.info("Exception occured while executing get node details api for {}".format(PPAN_IP))
+                      timer.cancel()
+                      return "pending"
+                      
+              except Exception as e:
+                timer.cancel()
+                logging.error('Exception: %s' % e, exc_info=True)
+                return "pending"
+
+      Handler: index.handler
+      Role: !GetAtt CheckSyncStatusExecutionRole.Arn
+      Runtime: python3.6
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref ISESecurityGroup
+        SubnetIds:
+          - !Ref PrivateSubnet1A
+          - !Ref PrivateSubnet1B            
+  CheckSyncStatusExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+      Path: "/"
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+              - ec2:DescribeInstance
+              - ec2:CreateNetworkInterface
+            Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*
+
+  # Lambda - Sends Callback to the CloudFormation Wait Condition, signaling whether the Deployment was created successfully
+  CallbackLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Sends callback to CloudFormation to continue
+      Code:
+        ZipFile: |
+          import json
+          import logging
+          import threading
+          from botocore.vendored import requests
+          import sys
+          import boto3
+          
+          logging.basicConfig(stream = sys.stdout)
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          
+          def timeout(event, context):
+            logging.error('Execution is about to time out, sending failure response to CloudFormation')
+            requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
+            response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+            sys.exit(1)
+            
+          def get_ssm_parameter(ssm_client, ssm_parameter_name):
+                  param_value = ssm_client.get_parameter(
+                  Name=ssm_parameter_name,
+                  WithDecryption=False
+              )
+                 
+                  return param_value.get('Parameter').get('Value')
+                  
+          def handler(event, context):
+            timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 2, timeout, args=[event, context])
+            timer.start()
+            logger.info('Received event: %s' % json.dumps(event))
+            logger.info(event['ResourceProperties']['WaitHandle'])
+            ssm_client = boto3.client('ssm',region_name="us-east-1")
+            try:
+              logger.info("#Retriving SSM parameters...")
+              SYNC_STATUS = get_ssm_parameter(ssm_client,"SyncStatus")
+              if SYNC_STATUS == 'SYNC_COMPLETED':
+                logger.info("Sync is successful")
+                requests_data=json.dumps(dict(Status='SUCCESS',Reason='Deployment creation successful',UniqueId='ISENodeStates',Data='success')).encode('utf-8')
+              else:
+                logger.info("Sync failed")
+                requests_data=json.dumps(dict(Status='FAILURE',Reason='Invalid Deployment Status',UniqueId='ISENodeStates',Data='failure')).encode('utf-8')
+              response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+              logger.info(response)
+              timer.cancel()
+            except Exception as e:
+              logger.info("Sync failed")
+              logging.error('Exception: %s' % e, exc_info=True)
+              requests_data=json.dumps(dict(Status='FAILURE',Reason='Exception: %s' % e,UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
+              response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+              logger.info(response)
+              timer.cancel()
+              
+      Handler: index.handler
+      Runtime: python3.6
+      Role: !GetAtt CallbackRole.Arn
+      Timeout: 300
+  CallbackRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+      Path: "/"
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+              - ec2:DescribeInstance
+              - ec2:CreateNetworkInterface
+            Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*            
 Outputs:
   ISENode1ID:
     Description: 'InstanceID of the newly created ISE Node 1 '
