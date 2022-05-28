@@ -1,0 +1,134 @@
+-----------------------------------------------------------------------------
+Region: us-east-1
+StackName: tCaT-ise-quickstart-dc6cf9
+*****************************************************************************
+ResourceStatusReason:  
+The following resource(s) failed to create: [WorkloadStack].
+*****************************************************************************
+*****************************************************************************
+Events:  
+TimeStamp                         ResourceStatus      ResourceType                LogicalResourceId           ResourceStatusReason
+--------------------------------  ------------------  --------------------------  --------------------------  ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+2022-04-20 17:56:52.194000+00:00  CREATE_FAILED       AWS::CloudFormation::Stack  tCaT-ise-quickstart-dc6cf9  The following resource(s) failed to create: [WorkloadStack].
+2022-04-20 17:56:50.933000+00:00  CREATE_FAILED       AWS::CloudFormation::Stack  WorkloadStack               Embedded stack arn:aws:cloudformation:us-east-1:730882916506:stack/tCaT-ise-quickstart-dc6cf9-WorkloadStack-1O3GK6IDKKNV9/3400e8b0-c0d3-11ec-be75-0aa6ea9098d7 was not successfully created: The following resource(s) failed to create: [ISEStack].
+2022-04-20 17:56:28.895000+00:00  CREATE_IN_PROGRESS  AWS::CloudFormation::Stack  WorkloadStack               Resource creation Initiated
+2022-04-20 17:56:27.631000+00:00  CREATE_IN_PROGRESS  AWS::CloudFormation::Stack  WorkloadStack
+2022-04-20 17:56:23.463000+00:00  CREATE_COMPLETE     AWS::CloudFormation::Stack  VPCStack
+2022-04-20 17:52:50.568000+00:00  CREATE_IN_PROGRESS  AWS::CloudFormation::Stack  VPCStack                    Resource creation Initiated
+2022-04-20 17:52:49.403000+00:00  CREATE_IN_PROGRESS  AWS::CloudFormation::Stack  VPCStack
+2022-04-20 17:52:41.627000+00:00  CREATE_IN_PROGRESS  AWS::CloudFormation::Stack  tCaT-ise-quickstart-dc6cf9  User Initiated
+*****************************************************************************
+-----------------------------------------------------------------------------
+Tested on: Wednesday, 20. April 2022 05:57PM
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Region: us-east-1
+StackName: tCaT-ise-quickstart-dc6cf9-VPCStack-E0MO99HXAFSR
+*****************************************************************************
+ResourceStatusReason:  
+Stack launch was successful
+*****************************************************************************
+*****************************************************************************
+Events:  
+TimeStamp                         ResourceStatus      ResourceType                           LogicalResourceId                                 ResourceStatusReason
+--------------------------------  ------------------  -------------------------------------  ------------------------------------------------  ---------------------------
+2022-04-20 17:56:07.474000+00:00  CREATE_COMPLETE     AWS::CloudFormation::Stack             tCaT-ise-quickstart-dc6cf9-VPCStack-E0MO99HXAFSR
+2022-04-20 17:56:00.880000+00:00  CREATE_COMPLETE     AWS::EC2::Route                        PrivateSubnet2ARoute
+2022-04-20 17:55:59.382000+00:00  CREATE_COMPLETE     AWS::EC2::Route                        PrivateSubnet1ARoute
+2022-04-20 17:55:45.353000+00:00  CREATE_IN_PROGRESS  AWS::EC2::Route                        PrivateSubnet2ARoute                              Resource creation Initiated
+2022-04-20 17:55:43.921000+00:00  CREATE_IN_PROGRESS  AWS::EC2::Route                        PrivateSubnet1ARoute                              Resource creation Initiated
+2022-04-20 17:55:43.692000+00:00  CREATE_IN_PROGRESS  AWS::EC2::Route                        PrivateSubnet2ARoute
+2022-04-20 17:55:42.460000+00:00  CREATE_IN_PROGRESS  AWS::EC2::Route                        PrivateSubnet1ARoute
+2022-04-20 17:55:38.907000+00:00  CREATE_COMPLETE     AWS::EC2::NatGateway                   NATGateway2
+2022-04-20 17:55:37.949000+00:00  CREATE_COMPLETE     AWS::EC2::NatGateway                   NATGateway1
+2022-04-20 17:54:06.008000+00:00  CREATE_IN_PROGRESS  AWS::EC2::NatGateway                   NATGateway2                                       Resource creation Initiated
+2022-04-20 17:54:05.444000+00:00  CREATE_IN_PROGRESS  AWS::EC2::NatGateway                   NATGateway1                                       Resource creation Initiated
+2022-04-20 17:54:05.232000+00:00  CREATE_IN_PROGRESS  AWS::EC2::NatGateway                   NATGateway2
+2022-04-20 17:54:04.553000+00:00  CREATE_IN_PROGRESS  AWS::EC2::NatGateway                   NATGateway1
+2022-04-20 17:53:59.986000+00:00  CREATE_COMPLETE     AWS::EC2::EIP                          NAT2EIP
+2022-04-20 17:53:59.957000+00:00  CREATE_COMPLETE     AWS::EC2::EIP                          NAT1EIP
+2022-04-20 17:53:59.287000+00:00  CREATE_COMPLETE     AWS::EC2::Route                        PublicSubnetRoute
+2022-04-20 17:53:59.169000+00:00  CREATE_COMPLETE     AWS::EC2::SubnetRouteTableAssociation  PrivateSubnet1ARouteTableAssociation
+2022-04-20 17:53:58.950000+00:00  CREATE_IN_PROGRESS  AWS::EC2::EIP                          NAT2EIP                                           Resource creation Initiated
+2022-04-20 17:53:58.796000+00:00  CREATE_IN_PROGRESS  AWS::EC2::EIP                          NAT1EIP                                           Resource creation Initiated
+2022-04-20 17:53:55.614000+00:00  CREATE_COMPLETE     AWS::EC2::SubnetRouteTableAssociation  PublicSubnet2RouteTableAssociation
+2022-04-20 17:53:54.374000+00:00  CREATE_IN_PROGRESS  AWS::EC2::SubnetRouteTableAssociation  PublicSubnet2RouteTableAssociation                Resource creation Initiated
+2022-04-20 17:53:51.114000+00:00  CREATE_IN_PROGRESS  AWS::EC2::SubnetRouteTableAssociation  PublicSubnet2RouteTableAssociation
+2022-04-20 17:53:47.690000+00:00  CREATE_IN_PROGRESS  AWS::EC2::SubnetRouteTableAssociation  PrivateSubnet1ARouteTableAssociation              Resource creation Initiated
+2022-04-20 17:53:46.967000+00:00  CREATE_COMPLETE     AWS::EC2::VPCEndpoint                  S3VPCEndpoint
+2022-04-20 17:53:46.868000+00:00  CREATE_COMPLETE     AWS::EC2::Subnet                       PublicSubnet2
+2022-04-20 17:53:46.450000+00:00  CREATE_IN_PROGRESS  AWS::EC2::VPCEndpoint                  S3VPCEndpoint                                     Resource creation Initiated
+2022-04-20 17:53:45.638000+00:00  CREATE_IN_PROGRESS  AWS::EC2::VPCEndpoint                  S3VPCEndpoint
+2022-04-20 17:53:45.540000+00:00  CREATE_COMPLETE     AWS::EC2::SubnetRouteTableAssociation  PrivateSubnet2ARouteTableAssociation
+2022-04-20 17:53:45.032000+00:00  CREATE_IN_PROGRESS  AWS::EC2::SubnetRouteTableAssociation  PrivateSubnet1ARouteTableAssociation
+2022-04-20 17:53:44.650000+00:00  CREATE_IN_PROGRESS  AWS::EC2::SubnetRouteTableAssociation  PrivateSubnet2ARouteTableAssociation              Resource creation Initiated
+2022-04-20 17:53:44.225000+00:00  CREATE_COMPLETE     AWS::EC2::SubnetRouteTableAssociation  PublicSubnet1RouteTableAssociation
+2022-04-20 17:53:43.549000+00:00  CREATE_IN_PROGRESS  AWS::EC2::Route                        PublicSubnetRoute                                 Resource creation Initiated
+2022-04-20 17:53:43.502000+00:00  CREATE_IN_PROGRESS  AWS::EC2::SubnetRouteTableAssociation  PublicSubnet1RouteTableAssociation                Resource creation Initiated
+2022-04-20 17:53:43.491000+00:00  CREATE_IN_PROGRESS  AWS::EC2::EIP                          NAT2EIP
+2022-04-20 17:53:43.460000+00:00  CREATE_IN_PROGRESS  AWS::EC2::EIP                          NAT1EIP
+2022-04-20 17:53:42.855000+00:00  CREATE_IN_PROGRESS  AWS::EC2::Route                        PublicSubnetRoute
+2022-04-20 17:53:41.196000+00:00  CREATE_IN_PROGRESS  AWS::EC2::SubnetRouteTableAssociation  PrivateSubnet2ARouteTableAssociation
+2022-04-20 17:53:41.163000+00:00  CREATE_COMPLETE     AWS::EC2::RouteTable                   PrivateSubnet1ARouteTable
+2022-04-20 17:53:40.875000+00:00  CREATE_IN_PROGRESS  AWS::EC2::SubnetRouteTableAssociation  PublicSubnet1RouteTableAssociation
+2022-04-20 17:53:39.064000+00:00  CREATE_COMPLETE     AWS::EC2::VPCGatewayAttachment         VPCGatewayAttachment
+2022-04-20 17:53:36.665000+00:00  CREATE_COMPLETE     AWS::EC2::RouteTable                   PrivateSubnet2ARouteTable
+2022-04-20 17:53:36.643000+00:00  CREATE_COMPLETE     AWS::EC2::RouteTable                   PublicSubnetRouteTable
+2022-04-20 17:53:28.817000+00:00  CREATE_COMPLETE     AWS::EC2::Subnet                       PublicSubnet1
+2022-04-20 17:53:28.199000+00:00  CREATE_COMPLETE     AWS::EC2::Subnet                       PrivateSubnet1A
+2022-04-20 17:53:27.561000+00:00  CREATE_COMPLETE     AWS::EC2::Subnet                       PrivateSubnet2A
+2022-04-20 17:53:26.312000+00:00  CREATE_IN_PROGRESS  AWS::EC2::Subnet                       PublicSubnet2                                     Resource creation Initiated
+2022-04-20 17:53:25.298000+00:00  CREATE_COMPLETE     AWS::EC2::VPCDHCPOptionsAssociation    VPCDHCPOptionsAssociation
+2022-04-20 17:53:24.989000+00:00  CREATE_IN_PROGRESS  AWS::EC2::RouteTable                   PrivateSubnet2ARouteTable                         Resource creation Initiated
+2022-04-20 17:53:24.792000+00:00  CREATE_IN_PROGRESS  AWS::EC2::VPCDHCPOptionsAssociation    VPCDHCPOptionsAssociation                         Resource creation Initiated
+2022-04-20 17:53:24.680000+00:00  CREATE_IN_PROGRESS  AWS::EC2::Subnet                       PublicSubnet1                                     Resource creation Initiated
+2022-04-20 17:53:24.641000+00:00  CREATE_IN_PROGRESS  AWS::EC2::RouteTable                   PublicSubnetRouteTable                            Resource creation Initiated
+2022-04-20 17:53:24.535000+00:00  CREATE_IN_PROGRESS  AWS::EC2::Subnet                       PrivateSubnet1A                                   Resource creation Initiated
+2022-04-20 17:53:23.980000+00:00  CREATE_IN_PROGRESS  AWS::EC2::Subnet                       PrivateSubnet2A                                   Resource creation Initiated
+2022-04-20 17:53:23.634000+00:00  CREATE_IN_PROGRESS  AWS::EC2::RouteTable                   PrivateSubnet1ARouteTable                         Resource creation Initiated
+2022-04-20 17:53:23.616000+00:00  CREATE_IN_PROGRESS  AWS::EC2::Subnet                       PublicSubnet2
+2022-04-20 17:53:23.468000+00:00  CREATE_IN_PROGRESS  AWS::EC2::VPCGatewayAttachment         VPCGatewayAttachment                              Resource creation Initiated
+2022-04-20 17:53:22.863000+00:00  CREATE_IN_PROGRESS  AWS::EC2::VPCGatewayAttachment         VPCGatewayAttachment
+2022-04-20 17:53:22.279000+00:00  CREATE_IN_PROGRESS  AWS::EC2::VPCDHCPOptionsAssociation    VPCDHCPOptionsAssociation
+2022-04-20 17:53:22.204000+00:00  CREATE_IN_PROGRESS  AWS::EC2::Subnet                       PublicSubnet1
+2022-04-20 17:53:21.815000+00:00  CREATE_IN_PROGRESS  AWS::EC2::RouteTable                   PublicSubnetRouteTable
+2022-04-20 17:53:21.770000+00:00  CREATE_IN_PROGRESS  AWS::EC2::RouteTable                   PrivateSubnet2ARouteTable
+2022-04-20 17:53:21.476000+00:00  CREATE_IN_PROGRESS  AWS::EC2::Subnet                       PrivateSubnet2A
+2022-04-20 17:53:21.445000+00:00  CREATE_IN_PROGRESS  AWS::EC2::Subnet                       PrivateSubnet1A
+2022-04-20 17:53:20.779000+00:00  CREATE_IN_PROGRESS  AWS::EC2::RouteTable                   PrivateSubnet1ARouteTable
+2022-04-20 17:53:18.079000+00:00  CREATE_COMPLETE     AWS::EC2::InternetGateway              InternetGateway
+2022-04-20 17:53:17.182000+00:00  CREATE_COMPLETE     AWS::EC2::VPC                          VPC
+2022-04-20 17:53:08.430000+00:00  CREATE_COMPLETE     AWS::EC2::DHCPOptions                  DHCPOptions
+2022-04-20 17:53:01.887000+00:00  CREATE_IN_PROGRESS  AWS::EC2::InternetGateway              InternetGateway                                   Resource creation Initiated
+2022-04-20 17:53:01.853000+00:00  CREATE_IN_PROGRESS  AWS::EC2::DHCPOptions                  DHCPOptions                                       Resource creation Initiated
+2022-04-20 17:53:00.067000+00:00  CREATE_IN_PROGRESS  AWS::EC2::VPC                          VPC                                               Resource creation Initiated
+2022-04-20 17:52:59.394000+00:00  CREATE_IN_PROGRESS  AWS::EC2::DHCPOptions                  DHCPOptions
+2022-04-20 17:52:59.200000+00:00  CREATE_IN_PROGRESS  AWS::EC2::InternetGateway              InternetGateway
+2022-04-20 17:52:59.191000+00:00  CREATE_IN_PROGRESS  AWS::EC2::VPC                          VPC
+2022-04-20 17:52:50.252000+00:00  CREATE_IN_PROGRESS  AWS::CloudFormation::Stack             tCaT-ise-quickstart-dc6cf9-VPCStack-E0MO99HXAFSR  User Initiated
+*****************************************************************************
+-----------------------------------------------------------------------------
+Tested on: Wednesday, 20. April 2022 05:57PM
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Region: us-east-1
+StackName: tCaT-ise-quickstart-dc6cf9-WorkloadStack-1O3GK6IDKKNV9
+*****************************************************************************
+ResourceStatusReason:  
+The following resource(s) failed to create: [ISEStack].
+*****************************************************************************
+*****************************************************************************
+Events:  
+TimeStamp                         ResourceStatus      ResourceType                LogicalResourceId                                       ResourceStatusReason
+--------------------------------  ------------------  --------------------------  ------------------------------------------------------  ------------------------------------------------------------
+2022-04-20 17:56:39.514000+00:00  CREATE_FAILED       AWS::CloudFormation::Stack  tCaT-ise-quickstart-dc6cf9-WorkloadStack-1O3GK6IDKKNV9  The following resource(s) failed to create: [ISEStack].
+2022-04-20 17:56:38.345000+00:00  CREATE_FAILED       AWS::CloudFormation::Stack  ISEStack                                                Parameter 'FailoverPollingRate' must be one of AllowedValues
+2022-04-20 17:56:37.329000+00:00  CREATE_IN_PROGRESS  AWS::CloudFormation::Stack  ISEStack
+2022-04-20 17:56:28.617000+00:00  CREATE_IN_PROGRESS  AWS::CloudFormation::Stack  tCaT-ise-quickstart-dc6cf9-WorkloadStack-1O3GK6IDKKNV9  User Initiated
+*****************************************************************************
+-----------------------------------------------------------------------------
+Tested on: Wednesday, 20. April 2022 05:57PM
+-----------------------------------------------------------------------------
+

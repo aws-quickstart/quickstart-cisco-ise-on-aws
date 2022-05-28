@@ -61,6 +61,16 @@ Parameters:
       - 'yes'
       - 'no'
     ConstraintDescription: It can either be yes or no
+  FailoverPollingRate:
+    Description: 
+      The rate (frequency) that determines when CloudWatch Events runs the rule that
+      triggers the Route Monitor Lambda function.
+    Default: rate(60 minutes)
+    AllowedValues:
+      - rate(1 minute)
+      - rate(10 minutes)
+      - rate(60 minutes)
+    Type: String
   PrivateSubnet1A:
     Type: 'AWS::EC2::Subnet::Id'
     Description: >-
@@ -81,16 +91,7 @@ Parameters:
     Default: 10.0.32.0/19
     Description: CIDR block for private subnet 2 located in Availability Zone 2.
     Type: String
-  FailoverPollingRate:
-    Description: 
-      The rate (frequency) that determines when CloudWatch Events runs the rule that
-      triggers the Route Monitor Lambda function.
-    Default: rate(60 minutes)
-    AllowedValues:
-      - rate(1 minute)
-      - rate(10 minutes)
-      - rate(60 minutes)
-    Type: String
+
   Node1Hostname:
     Description: >-
       Enter the hostname. This field only supports alphanumeric characters and
@@ -977,7 +978,7 @@ Resources:
         - !Sub arn:aws:automate:${AWS::Region}:ec2:recover
       AlarmDescription: Recover instance if its status checks fail.
       Namespace: AWS/EC2
-      MetricName: StatusCheckFailed_System
+      MetricName: StatusCheckFailed
       Dimensions:
         - Name: InstanceId
           Value: !Ref ISENode1
@@ -993,7 +994,7 @@ Resources:
         - !Sub arn:aws:automate:${AWS::Region}:ec2:recover
       AlarmDescription: Recover instance if its status checks fail.
       Namespace: AWS/EC2
-      MetricName: StatusCheckFailed_System
+      MetricName: StatusCheckFailed
       Dimensions:
         - Name: InstanceId
           Value: !Ref ISENode2
@@ -1051,7 +1052,24 @@ Resources:
               timer.cancel()
               cfnresponse.send(event, context, status, responseData)
 
-
+  ISENode1IPParameter:
+    Type: AWS::SSM::Parameter
+    Properties: 
+      Description: IP Address of Primary PAN
+      Name: PPAN_IP
+      Type: String
+      Value: !GetAtt 
+        - ISENode1
+        - PrivateIp
+  ISENode2IPParameter:
+    Type: AWS::SSM::Parameter
+    Properties: 
+      Description: IP Address of Secondary PAN
+      Name: SPAN_IP
+      Type: String
+      Value: !GetAtt 
+      - ISENode2
+      - PrivateIp
   ISENode2FqdnParameter:
     Type: AWS::SSM::Parameter
     Properties: 
@@ -1066,13 +1084,6 @@ Resources:
       Name: SyncStatus
       Type: String
       Value: PENDING
-  RetriesParameter:
-    Type: AWS::SSM::Parameter
-    Properties: 
-      Description: Retries for Failover state machine
-      Name: Retries
-      Type: String
-      Value: 5
   DeploymentStateMachineLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -1260,7 +1271,6 @@ Resources:
           from botocore.vendored import requests
           import boto3
           import sys
-          import socket
           
           logging.basicConfig(stream = sys.stdout)
           logger = logging.getLogger()
@@ -1294,16 +1304,10 @@ Resources:
               ssm_client = boto3.client('ssm',region_name="us-east-1")
               timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
               try:
-                  isenode01_ip = socket.gethostbyname_ex('iseserver1.example.com')[2][-1]
-                  isenode02_ip = socket.gethostbyname_ex('iseserver2.example.com')[2][-1]
-                  logger.info("Installed ISE Instance IPs are:\n PPAN - {} , SPAN - {}".format(isenode01_ip, isenode02_ip))
-                  
+              
                   logger.info("#Setting SSM parameters...")
-                  set_ssm_parameter(ssm_client,"PPAN_IP",isenode01_ip)
-                  set_ssm_parameter(ssm_client,"SPAN_IP",isenode02_ip)
                   set_ssm_parameter(ssm_client,"ADMIN_USERNAME","admin")
                   set_ssm_parameter(ssm_client,"ADMIN_PASSWORD","Test123",Type="SecureString")
-                  
                   logger.info("#Retriving SSM parameters...")
                   PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
                   SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
@@ -1331,8 +1335,6 @@ Resources:
                               if resp.status_code == 200:
                                   nodes_to_check.remove(ip)
                                   logger.info("ISE - {} is up and running".format(ip))
-                                  timer.cancel()
-                                  return "running"
                           except Exception as e:
                               logging.error('Exception: %s' % e, exc_info=True)
                               logger.error("Exception occured while executing get node details api for {}".format(PPAN_IP))
@@ -1340,12 +1342,14 @@ Resources:
                               time.sleep(2)
                               
                   if nodes_to_check:
-                    timer.cancel()
-                    return "pending"
+                     timer.cancel()
+                     return "pending"
+                      
+                  timer.cancel()
+                  return "running"
                   
               except Exception as e:
                 logging.error('Exception: %s' % e, exc_info=True)
-
   
   
       Handler: index.handler
@@ -1575,14 +1579,7 @@ Resources:
                     timer.cancel()
                     return "running"
                 raise RegisterSecondaryNodeFailed({"Register Secondary node to form deployment Failed"})
-              
-              except RegisterSecondaryNodeFailed:
-                requests_data=json.dumps(dict(Status='FAILURE',Reason='Secondary Node Registration Failed',UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
-                response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
-                logger.info(response)
-                timer.cancel()
-                logging.error('Exception: %s', exc_info=True)
-                
+                    
               except Exception as e:
                 requests_data=json.dumps(dict(Status='FAILURE',Reason='Secondary Node Registration Failed',UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
                 response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
@@ -1696,11 +1693,11 @@ Resources:
                       logger.info("API response for checking node sync status and roles is: {} ".format(resp.text))
                       if resp.status_code == 200:
                         json_resp = json.loads(resp.content.decode("utf-8"))
-                        if json_resp["response"][0]['nodeStatus'] == "Connected":
+                        if json_resp["response"][1]['nodeStatus'] == "Connected":
                           set_ssm_parameter(ssm_client,"SyncStatus","SYNC_COMPLETED")
                           timer.cancel()
                           return "running"
-                        elif json_resp["response"][0]['nodeStatus'] == "RegistrationFailed":
+                        elif json_resp["response"][1]['nodeStatus'] == "RegistrationFailed":
                           set_ssm_parameter(ssm_client,"SyncStatus","SYNC_FAILED")
                           requests_data=json.dumps(dict(Status='FAILURE',Reason='Secondary Node Sync or Registration failed',UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
                           response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
@@ -1852,7 +1849,7 @@ Resources:
             Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*            
 
   #The lambda needs to be written. Trigger needs to be defined
-  TriggerFailoverLambdaExecutionRole:
+  FailoverLambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -1864,6 +1861,18 @@ Resources:
             - lambda.amazonaws.com
           Action:
           - sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Path: "/"
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action: 
+            - states:StartExecution
+            Resource: "*"
       ManagedPolicyArns:
       - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
@@ -1881,13 +1890,12 @@ Resources:
               - ec2:DescribeInstance
               - ec2:CreateNetworkInterface
             Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*
-  
-  TriggerFailoverLambda:
+  FailoverLambda:
     Type: AWS::Lambda::Function
     Properties:
       Description: Triggers Failover when Primary PAN is down
       Timeout: 300
-      Role: !GetAtt 'TriggerFailoverLambdaExecutionRole.Arn'
+      Role: !GetAtt 'FailoverLambdaExecutionRole.Arn'
       Handler: index.handler
       Runtime: python3.6
       Code:
@@ -1925,7 +1933,7 @@ Resources:
                   
               ssm_client = boto3.client('ssm',region_name="us-east-1")
               try:
-                  logger.info("#Retriving SSM parameters...")
+                  print("#Retriving SSM parameters...")
                   PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
                   SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
                   SyncStatus = get_ssm_parameter(ssm_client,"SyncStatus")
@@ -1933,50 +1941,44 @@ Resources:
                   ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
                   API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
                   API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-                  retries = get_ssm_parameter(ssm_client,"Retries")
-                  logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
-                  logger.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
-                  logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
-                  logger.info("API_AUTH : {}".format(API_AUTH))
-                  logger.info("API_HEADER : {}".format(API_HEADER))
-                  logger.info("Retries : {}".format(retries))
+                  
+                  print("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
+                  print("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
+                  print("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
+                  print("API_AUTH : {}".format(API_AUTH))
+                  print("API_HEADER : {}".format(API_HEADER))
                   
                   data = {}
-                  
+                  retries = 5
                   if SyncStatus == "pending":
-                      logger.info("Application still being deployed. Failover not required!")        
-                      return "skip"
-                  elif SyncStatus == "SYNC_FAILED":
-                      logger.info("Need not execute Failover state machine. Failover can be triggered only for successful deployment.")        
-                      return "skip"
-                  elif SyncStatus == "MAINTENANCE":
-                      logger.info("Need not execute Failover state machine. PPAN is under maintenance!")        
-                      return "skip"
-                  elif SyncStatus == "SYNC_COMPLETED":
-                      stepFunction = boto3.client('stepfunctions')
-                      response = stepFunction.list_state_machines(
-                              maxResults=123
-                          )
-                      response = response['stateMachines']
-                      failover_state_machine_Arn = ""
-                      for item in response:
-                          logger.debug("Identifying Failover statemachine Arn")
-                          if "FailoverStateMachine" in item['stateMachineArn']:
-                              logger.debug("FailoverStateMachine Arn : {}".format(item['stateMachineArn']))
-                              failover_state_machine_Arn = item['stateMachineArn']
+                    return {
+                            'statusCode': 200,
+                            'body': json.dumps('Application still being deployed. Failover not required!')
+                        }
+                  if SyncStatus == "SYNC_COMPLETED":
+                      url = 'https://{}/api/v1/deployment/node'.format(PPAN_IP)
+                      try:
+                          resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
+                          print("API response for {} is {} ".format(PPAN_IP, resp.text))
+                          if resp.status_code == 200:
+                              print("ISE - {} is up and running".format(PPAN_IP))
+                              return "promotion not required"
+                      except Exception as e:
+                          print("Exception occured while executing get node details api for {}".format(PPAN_IP))
+                          url = 'https://{}/api/v1/deployment/promote'.format(SPAN_IP)
+                          resp = requests.post(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
+                          print(resp.text)
+                          print("promoting secondary")
+                          return "promoted"
+                          logging.error('Exception: %s' % e, exc_info=True)
+                          time.sleep(2)
+                          PPAN_IP = set_ssm_parameter(ssm_client,"PPAN_IP", SPAN_IP)
+                          SPAN_IP = set_ssm_parameter(ssm_client,"SPAN_IP", PPAN_IP)
+                  if SyncStatus == "SYNC_FAILED":
+                      "Code for mailing admin about sync failed"
           
-                      response = stepFunction.start_execution(
-                              stateMachineArn=failover_state_machine_Arn
-                          )
-                                      
-                  else:
-                      logger.info("Need not execute Failover state machine. Sync status is unknown.")    
-                      return "skip"
-                      
               except Exception as e:
                 logging.error('Exception: %s' % e, exc_info=True)
-                return int(get_ssm_parameter(ssm_client,"Retries"))
-
 
       MemorySize: 3008
       VpcConfig:
@@ -1985,17 +1987,16 @@ Resources:
         SubnetIds:
           - !Ref PrivateSubnet1A
           - !Ref PrivateSubnet1B
-          
+     
   LambdaSchedulePermission:
     Type: "AWS::Lambda::Permission"
     Properties:
       Action: 'lambda:InvokeFunction'
-      FunctionName: !Sub ${TriggerFailoverLambda.Arn}
+      FunctionName: !Sub ${FailoverLambda.Arn}
       Principal: 'events.amazonaws.com'
       SourceArn: !Sub ${LambdaSchedule.Arn}
     DependsOn:
       - LambdaSchedule
-
   LambdaSchedule:
     Type: "AWS::Events::Rule"
     Properties:
@@ -2004,10 +2005,10 @@ Resources:
       ScheduleExpression: !Ref FailoverPollingRate
       State: ENABLED
       Targets:
-        - Arn: !Sub ${TriggerFailoverLambda.Arn}
+        - Arn: !Sub ${FailoverLambda.Arn}
           Id: LambdaSchedule
     DependsOn:
-      - TriggerFailoverLambda
+      - FailoverLambda
 
   FailoverStateMachine:
     Type: AWS::StepFunctions::StateMachine
@@ -2019,284 +2020,76 @@ Resources:
       RoleArn: !GetAtt StatesExecutionRole.Arn
       DefinitionString: !Sub |-
         {
-          "Comment": "A state machine that performs Failover by promoting SPAN to PPAN.",
-          "StartAt": "Check PPAN Status",
+          "Comment": "A state machine that performs ISE nodes deployment.",
+          "StartAt": "Check SPAN Gateway status",
           "States": {
-            "Check PPAN Status": {
-              "Type": "Task",
-              "Resource": "${CheckPPANStatusLambda.Arn}",
-              "Next": "Choice-Trigger Failover?",
-              "InputPath": "$",
-              "OutputPath": "$"
-            },
-            "Choice-Trigger Failover?": {
-              "Type": "Choice",
-              "Choices": [
-                {
-                  "Variable": "$.PrimaryState",
-                  "StringEquals": "running",
-                  "Next": "PPAN is healthy. Failover not required!"
-                },
-                {
-                  "And": [
-                    {
-                      "Variable": "$.PrimaryState",
-                      "StringEquals": "failed"
-                    },
-                    {
-                      "Variable": "$.retries",
-                      "StringEquals": "0"
-                    }
-                  ],
-                  "Next": "Check SPAN Gateway status"
-                }
-              ],
-              "Default": "Wait-Polling  for PPAN status",
-              "InputPath": "$"
-            },
-            "Wait-Polling  for PPAN status": {
-              "Type": "Wait",
-              "Seconds": 20,
-              "Next": "Check PPAN Status"
-            },
             "Check SPAN Gateway status": {
               "Type": "Task",
               "Resource": "${CheckSPANGatewayStatusLambda.Arn}",
-              "Next": "Choice - Is SPAN API Gateway enabled?",
-              "ResultPath": "$.SecondaryState",
+              "Next": "Is SPAN API Gateway enabled?",
+              "ResultPath": "$.PrimaryState",
               "InputPath": "$"
             },
             "Perform Failover": {
               "Type": "Task",
               "Resource": "${PerformFailoverLambda.Arn}",
-              "Next": "Wait - For SPAN to come up",
-              "ResultPath": "$.PromotionStatus",
-              "InputPath": "$",
-              "Catch": [
-                {
-                  "ErrorEquals": [
-                    "States.Timeout"
-                  ],
-                  "Next": "Wait - For SPAN to come up"
-                }
-              ],
-              "TimeoutSeconds": 180
+              "Next": "Wait for Promotion",
+              "ResultPath": "$.PrimaryState",
+              "InputPath": "$"
             },
-            "Wait - For SPAN to come up": {
-              "Type": "Wait",
-              "Seconds": 1800,
-              "Next": "Wait for Promotion"
-            },
-            "Choice - Is SPAN API Gateway enabled?": {
+            "Is SPAN API Gateway enabled?": {
               "Type": "Choice",
               "Choices": [
                 {
-                  "Variable": "$.SecondaryState",
+                  "Variable": "$.PrimaryState",
                   "StringEquals": "GatewayDown",
-                  "Next": "SPAN Gateway is down!"
+                  "Next": "Fail"
                 },
                 {
-                  "Variable": "$.SecondaryState",
+                  "Variable": "$.PrimaryState",
                   "StringEquals": "running",
                   "Next": "Perform Failover"
                 }
               ],
-              "Default": "SPAN Gateway is down!"
+              "Default": "Fail"
             },
-            "SPAN Gateway is down!": {
-              "Type": "Fail",
-              "Error": "Please check the logs",
-              "Cause": "Cannot proceed failover without SPAN Gateway"
+            "Fail": {
+              "Type": "Fail"
             },
             "Check Failover Successful": {
               "Type": "Task",
               "Resource": "${CheckFailoverSuccessfulLambda.Arn}",
-              "Next": "Choice - Is Failover successful?",
-              "InputPath": "$",
-              "OutputPath": "$"
+              "Next": "Is Failover successful?",
+              "ResultPath": "$.PrimaryState",
+              "InputPath": "$"
             },
             "Wait for Promotion": {
               "Type": "Wait",
-              "Next": "Check Failover Successful",
-              "Seconds": 180
+              "Seconds": 30,
+              "Next": "Check Failover Successful"
             },
-            "Choice - Is Failover successful?": {
+            "Is Failover successful?": {
               "Type": "Choice",
               "Choices": [
                 {
-                  "Variable": "$.FailoverStatus",
-                  "StringEquals": "success",
-                  "Next": "Failover Successful"
+                  "Variable": "$.PrimaryState",
+                  "StringEquals": "running",
+                  "Next": "Success"
                 },
                 {
-                  "And": [
-                    {
-                      "Variable": "$.FailoverStatus",
-                      "StringEquals": "pending"
-                    },
-                    {
-                      "Variable": "$.failure_retries",
-                      "StringEquals": "1"
-                    }
-                  ],
+                  "Variable": "$.PrimaryState",
+                  "StringEquals": "pending",
                   "Next": "Wait for Promotion"
-                },
-                {
-                  "Variable": "$.FailoverStatus",
-                  "StringEquals": "failure",
-                  "Next": "Failure is unsuccessful"
                 }
               ],
-              "Default": "Wait for Promotion",
-              "InputPath": "$"
+              "Default": "Wait for Promotion"
             },
-            "Failure is unsuccessful": {
-              "Type": "Fail",
-              "Error": "Please check the new PPAN for more information"
-            },
-            "Failover Successful": {
-              "Type": "Succeed"
-            },
-            "PPAN is healthy. Failover not required!": {
+            "Success": {
               "Type": "Succeed"
             }
           }
         }
 
-  CheckPPANStatusLambda:
-    Type: AWS::Lambda::Function
-    Properties:
-      Timeout: 300
-      Code:
-        ZipFile: !Sub | 
-          import json
-          import logging
-          import threading
-          import time
-          from botocore.vendored import requests
-          import boto3
-          import sys
-          
-          logging.basicConfig(stream = sys.stdout)
-          logger = logging.getLogger()
-          logger.setLevel(logging.INFO)
-          
-          def handler(event, context):
-              def get_ssm_parameter(ssm_client, ssm_parameter_name):
-                  param_value = ssm_client.get_parameter(
-                  Name=ssm_parameter_name,
-                  WithDecryption=False
-              )
-                 
-                  return param_value.get('Parameter').get('Value')
-              
-              def set_ssm_parameter(ssm_client, ssm_parameter_name, value, Overwrite=True, Type="String"):
-                  response = ssm_client.put_parameter(
-                  Name=ssm_parameter_name,
-                  Value=value,
-                  Overwrite=True,
-                  Type="String"
-              )
-                 
-                  return response
-                  
-              ssm_client = boto3.client('ssm',region_name="us-east-1")
-              try:
-                  logger.info("#Retriving SSM parameters...")
-                  PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
-                  SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
-                  SyncStatus = get_ssm_parameter(ssm_client,"SyncStatus")
-                  ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
-                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
-                  API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
-                  API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-                  retries = get_ssm_parameter(ssm_client,"Retries")
-                  logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
-                  logger.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
-                  logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
-                  logger.info("API_AUTH : {}".format(API_AUTH))
-                  logger.info("API_HEADER : {}".format(API_HEADER))
-                  logger.info("Retries : {}".format(retries))
-                  
-                  data = {}
-                  
-                  url = 'https://{}/api/v1/deployment/node'.format(PPAN_IP)
-                  try:
-                      resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
-                      logger.info("API response for {} is {} ".format(PPAN_IP, resp.text))
-                      parse_resp = json.loads(resp.text)
-                      hosts = parse_resp['response']
-                      if resp.status_code == 200:
-                          for item in hosts:
-                              if "hostname" in item.keys():
-                                  logger.info("ISE - {} is up and running".format(PPAN_IP))
-                                  logger.info("Promotion not required")
-                                  return {
-                                  "PrimaryState": "running",
-                                  "retries": "0"
-                                      }
-                      
-                  except Exception as e:
-                      logger.error("Exception occured while executing get node details api for {}".format(PPAN_IP))
-                      logger.info("Promoting SPAN - {} to PPAN".format(SPAN_IP))
-          
-                      if "retries" in event:
-                          retries = int(event['retries']) - 1
-                          return {
-                              "PrimaryState": "failed",
-                              "retries": str(retries)
-                              }      
-                      else:
-                          return {
-                              "PrimaryState": "failed",
-                              "retries": str(retries)
-                              } 
-                      logging.error('Exception: %s' % e, exc_info=True)
-                  
-          
-              except Exception as e:
-                logging.error('Exception: %s' % e, exc_info=True)
-
-
-      Handler: index.handler
-      Role: !GetAtt CheckPPANStatusExecutionRole.Arn
-      Runtime: python3.6
-      VpcConfig:
-        SecurityGroupIds:
-          - !Ref ISESecurityGroup
-        SubnetIds:
-          - !Ref PrivateSubnet1A
-          - !Ref PrivateSubnet1B     
-          
-  CheckPPANStatusExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-        - Effect: Allow
-          Principal:
-            Service:
-            - lambda.amazonaws.com
-          Action:
-          - sts:AssumeRole
-      ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-      - arn:aws:iam::aws:policy/AmazonEC2FullAccess
-      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
-      Path: "/"
-      Policies:
-      - PolicyName: root
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-          - Effect: Allow
-            Action:
-              - ec2:DescribeInstance
-              - ec2:CreateNetworkInterface
-            Resource: !Sub arn:${AWS::Partition}:ec2:*:*:* 
-            
   CheckSPANGatewayStatusLambda:
     Type: AWS::Lambda::Function
     Properties:
@@ -2363,15 +2156,11 @@ Resources:
                   url = 'https://{}/api/v1/deployment/node'.format(SPAN_IP)
                   try:
                       resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
-                      # logging.info("API response for {} is {} ".format(SPAN_IP, resp.text))
-                      parse_resp = json.loads(resp.text)
-                      hosts = parse_resp['response']
+                      logging.info("API response for {} is {} ".format(SPAN_IP, resp.text))
                       if resp.status_code == 200:
-                          for item in hosts:
-                              if "hostname" in item.keys():
-                                  logging.info("SPAN - {} has API gateway enabled".format(SPAN_IP))
-                                  timer.cancel()
-                                  return "running"
+                          logging.info("SPAN - {} has API gateway enabled".format(SPAN_IP))
+                          timer.cancel()
+                          return "running"
                   except Exception as e:
                       logger.error("Exception occured while executing get node details api for {}".format(SPAN_IP))
                       logger.error("API Gateway is not enabled".format(SPAN_IP))
@@ -2383,8 +2172,7 @@ Resources:
                   timer.cancel()
                   logging.error('Exception: %s' % e, exc_info=True)
 
-          
-          
+
       Handler: index.handler
       Role: !GetAtt CheckSPANGatewayStatusExecutionRole.Arn
       Runtime: python3.6
@@ -2393,8 +2181,7 @@ Resources:
           - !Ref ISESecurityGroup
         SubnetIds:
           - !Ref PrivateSubnet1A
-          - !Ref PrivateSubnet1B     
-          
+          - !Ref PrivateSubnet1B            
   CheckSPANGatewayStatusExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -2422,12 +2209,12 @@ Resources:
             Action:
               - ec2:DescribeInstance
               - ec2:CreateNetworkInterface
-            Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*      
-      
+            Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*
+
   PerformFailoverLambda:
     Type: AWS::Lambda::Function
     Properties:
-      Timeout: 180
+      Timeout: 300
       Code:
         ZipFile: !Sub | 
           import json
@@ -2491,7 +2278,7 @@ Resources:
                   try:
                       resp = requests.post(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
                       logging.info("API response for {} is {} ".format(SPAN_IP, resp.text))
-                      if resp.status_code == 200 and "success" in json.loads(resp.text):
+                      if resp.status_code == 200:
                           logging.info("SPAN to PPAN Promotion successful for - {}".format(SPAN_IP))
                           timer.cancel()
                           return "running"
@@ -2515,7 +2302,6 @@ Resources:
         SubnetIds:
           - !Ref PrivateSubnet1A
           - !Ref PrivateSubnet1B            
-          
   PerformFailoverExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -2599,7 +2385,7 @@ Resources:
                   ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
                   API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
                   API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-                  retries = get_ssm_parameter(ssm_client,"Retries")
+                  
                   logging.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
                   logging.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
                   logging.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
@@ -2611,51 +2397,20 @@ Resources:
                   url = 'https://{}/api/v1/deployment/node'.format(SPAN_IP)
                   try:
                       resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
-                      logging.info("API response for {} is {} ".format(SPAN_IP, resp.text))
-                      parse_resp = json.loads(resp.text)
-                      hosts = parse_resp['response']
+                      logging.info("API response for {} is {} ".format(PPAN_IP, resp.text))
                       if resp.status_code == 200:
-                          for item in hosts:
-                              if "hostname" in item.keys():
-                                  logging.info("Promotion is successful for {}".format(SPAN_IP))
-                                  timer.cancel()
-                                  logging.info("Updating SSM parameters for SPAN and PPAN")
-                                  logging.info("Old PPAN = {} , SPAN = {}".format(PPAN_IP, SPAN_IP))
-                                  set_ssm_parameter(ssm_client,"PPAN_IP", SPAN_IP)
-                                  set_ssm_parameter(ssm_client,"SPAN_IP", PPAN_IP)
-                                  PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
-                                  SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
-                                  logging.info("New PPAN = {} , SPAN = {}".format(PPAN_IP, SPAN_IP))
-                                  return {
-                                        "FailoverStatus": "success",
-                                        "failover_retries": str(retries)
-                                        }          
+                          logging.info("Promotion is successful for {}".format(SPAN_IP))
+                          timer.cancel()
+                          return "running"
                   except Exception as e:
                       print("Exception occured while executing get node details api for {}".format(SPAN_IP))
-                      if "failover_retries" in event:
-                          retries = int(event['failover_retries'])
-                          if retries == 0:
-                              return {
-                                "FailoverStatus": "failure"
-                                }          
-                          else:
-                              retries = int(event['failover_retries']) - 1
-                              return {
-                                "FailoverStatus": "pending",
-                                "failover_retries": str(retries)
-                                }      
-                      else:
-                          return {
-                            "FailoverStatus": "pending",
-                            "failover_retries": str(retries)
-                            }
-                  
+                      logging.error('Exception: %s' % e, exc_info=True)
+                      timer.cancel()
+                      return "pending"
           
               except Exception as e:
-                  # timer.cancel()
+                  timer.cancel()
                   logging.error('Exception: %s' % e, exc_info=True)
-
-
 
 
       Handler: index.handler
@@ -2666,8 +2421,7 @@ Resources:
           - !Ref ISESecurityGroup
         SubnetIds:
           - !Ref PrivateSubnet1A
-          - !Ref PrivateSubnet1B     
-          
+          - !Ref PrivateSubnet1B            
   CheckFailoverSuccessfulExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -2696,8 +2450,7 @@ Resources:
               - ec2:DescribeInstance
               - ec2:CreateNetworkInterface
             Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*  
-                  
-      
+            
 Outputs:
   ISENode1ID:
     Description: 'InstanceID of the newly created ISE Node 1 '

@@ -1,0 +1,21 @@
+project:
+  name: quickstart-cisco-ise-on-aws
+  regions:
+    - us-east-1
+  shorten_stack_name: true
+  #s3_bucket: tcat-quickstart-cisco-ise-on-aws-zwcdqyke
+  s3_regional_buckets: true
+  package_lambda: false
+  lambda_source_path: functions/source
+  lambda_zip_path: functions/packages
+  parameters:
+    QSS3BucketName: $[taskcat_autobucket]
+    QSS3KeyPrefix: "quickstart-cisco-ise-on-aws/"
+    QSS3BucketRegion: $[taskcat_current_region]
+    KeyPairName: vesivaku02
+    AvailabilityZones: $[taskcat_getaz_2]
+tests:
+  ise-quickstart:
+    template: templates/quickstart-cisco-ise-on-aws-main.template.yaml
+    regions:
+      - us-east-1
