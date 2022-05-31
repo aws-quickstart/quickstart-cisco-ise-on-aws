@@ -798,6 +798,8 @@ Resources:
         ResourceRecords:
           - !GetAtt ISENode1.PrivateIp
 
+          
+
         Type: A
         TTL: "300"
       - Name: !Join
@@ -806,6 +808,7 @@ Resources:
             - !Ref DNSDomain
         ResourceRecords:
           - !GetAtt ISENode2.PrivateIp
+          
 
         Type: A
         TTL: "300"
@@ -1052,6 +1055,8 @@ Resources:
               cfnresponse.send(event, context, status, responseData)
 
 
+
+
   ISENode2FqdnParameter:
     Type: AWS::SSM::Parameter
     Properties:
@@ -1066,6 +1071,7 @@ Resources:
       Name: SyncStatus
       Type: String
       Value: PENDING
+
   RetriesParameter:
     Type: AWS::SSM::Parameter
     Properties:
@@ -1073,6 +1079,7 @@ Resources:
       Name: Retries
       Type: String
       Value: 5
+
   DeploymentStateMachineLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -1260,6 +1267,7 @@ Resources:
           from botocore.vendored import requests
           import boto3
           import sys
+
           import socket
 
           logging.basicConfig(stream = sys.stdout)
@@ -1273,7 +1281,6 @@ Resources:
               )
 
                   return param_value.get('Parameter').get('Value')
-
           def set_ssm_parameter(ssm_client, ssm_parameter_name, value, Overwrite=True, Type="String"):
                   response = ssm_client.put_parameter(
                   Name=ssm_parameter_name,
@@ -1294,6 +1301,7 @@ Resources:
               ssm_client = boto3.client('ssm',region_name="us-east-1")
               timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
               try:
+
                   isenode01_ip = socket.gethostbyname_ex('iseserver1.example.com')[2][-1]
                   isenode02_ip = socket.gethostbyname_ex('iseserver2.example.com')[2][-1]
                   logger.info("Installed ISE Instance IPs are:\n PPAN - {} , SPAN - {}".format(isenode01_ip, isenode02_ip))
@@ -1303,6 +1311,7 @@ Resources:
                   set_ssm_parameter(ssm_client,"SPAN_IP",isenode02_ip)
                   set_ssm_parameter(ssm_client,"ADMIN_USERNAME","admin")
                   set_ssm_parameter(ssm_client,"ADMIN_PASSWORD","Test123",Type="SecureString")
+
 
                   logger.info("#Retriving SSM parameters...")
                   PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
@@ -1331,17 +1340,23 @@ Resources:
                               if resp.status_code == 200:
                                   nodes_to_check.remove(ip)
                                   logger.info("ISE - {} is up and running".format(ip))
+
                                   timer.cancel()
                                   return "running"
+
                           except Exception as e:
                               logging.error('Exception: %s' % e, exc_info=True)
                               logger.error("Exception occured while executing get node details api for {}".format(PPAN_IP))
                               retries -= 1
                               time.sleep(2)
 
+
                   if nodes_to_check:
                     timer.cancel()
                     return "pending"
+
+
+                              
 
               except Exception as e:
                 logging.error('Exception: %s' % e, exc_info=True)
@@ -1400,6 +1415,7 @@ Resources:
           import boto3
           import sys
 
+
           logging.basicConfig(stream = sys.stdout)
           logger = logging.getLogger()
           logger.setLevel(logging.INFO)
@@ -1407,6 +1423,7 @@ Resources:
           class PromoteToPrimaryFailed(Exception):
             """Raised when the Set Primary PAN Lambda is failed"""
             pass
+
 
           def get_ssm_parameter(ssm_client, ssm_parameter_name,WithDecryption=False):
                   param_value = ssm_client.get_parameter(
@@ -1422,7 +1439,9 @@ Resources:
                   response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
                   sys.exit(1)
 
+
           def handler(event, context):
+
 
             ssm_client = boto3.client('ssm',region_name="us-east-1")
             timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
@@ -1514,6 +1533,7 @@ Resources:
           import boto3
           import sys
 
+
           logging.basicConfig(stream = sys.stdout)
           logger = logging.getLogger()
           logger.setLevel(logging.INFO)
@@ -1521,6 +1541,7 @@ Resources:
           class RegisterSecondaryNodeFailed(Exception):
             """Raised when the Set Primary PAN Lambda is failed"""
             pass
+
 
           def get_ssm_parameter(ssm_client, ssm_parameter_name,WithDecryption=False):
                   param_value = ssm_client.get_parameter(
@@ -1576,12 +1597,14 @@ Resources:
                     return "running"
                 raise RegisterSecondaryNodeFailed({"Register Secondary node to form deployment Failed"})
 
+
               except RegisterSecondaryNodeFailed:
                 requests_data=json.dumps(dict(Status='FAILURE',Reason='Secondary Node Registration Failed',UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
                 response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
                 logger.info(response)
                 timer.cancel()
                 logging.error('Exception: %s', exc_info=True)
+
 
               except Exception as e:
                 requests_data=json.dumps(dict(Status='FAILURE',Reason='Secondary Node Registration Failed',UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
@@ -1644,6 +1667,7 @@ Resources:
           import boto3
           import sys
 
+
           logging.basicConfig(stream = sys.stdout)
           logger = logging.getLogger()
           logger.setLevel(logging.INFO)
@@ -1696,11 +1720,13 @@ Resources:
                       logger.info("API response for checking node sync status and roles is: {} ".format(resp.text))
                       if resp.status_code == 200:
                         json_resp = json.loads(resp.content.decode("utf-8"))
+
                         if json_resp["response"][0]['nodeStatus'] == "Connected":
                           set_ssm_parameter(ssm_client,"SyncStatus","SYNC_COMPLETED")
                           timer.cancel()
                           return "running"
                         elif json_resp["response"][0]['nodeStatus'] == "RegistrationFailed":
+
                           set_ssm_parameter(ssm_client,"SyncStatus","SYNC_FAILED")
                           requests_data=json.dumps(dict(Status='FAILURE',Reason='Secondary Node Sync or Registration failed',UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
                           response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
@@ -1774,15 +1800,18 @@ Resources:
           import sys
           import boto3
 
+
           logging.basicConfig(stream = sys.stdout)
           logger = logging.getLogger()
           logger.setLevel(logging.INFO)
+
 
           def timeout(event, context):
             logging.error('Execution is about to time out, sending failure response to CloudFormation')
             requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
             response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
             sys.exit(1)
+
 
           def get_ssm_parameter(ssm_client, ssm_parameter_name):
                   param_value = ssm_client.get_parameter(
@@ -1791,7 +1820,6 @@ Resources:
               )
 
                   return param_value.get('Parameter').get('Value')
-
           def handler(event, context):
             timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 2, timeout, args=[event, context])
             timer.start()
@@ -1823,6 +1851,7 @@ Resources:
       Role: !GetAtt CallbackRole.Arn
       Timeout: 300
   CallbackRole:
+
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -1853,6 +1882,7 @@ Resources:
 
   #The lambda needs to be written. Trigger needs to be defined
   TriggerFailoverLambdaExecutionRole:
+
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -1880,6 +1910,7 @@ Resources:
             Action:
               - ec2:DescribeInstance
               - ec2:CreateNetworkInterface
+
             Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*
 
   TriggerFailoverLambda:
@@ -2696,6 +2727,7 @@ Resources:
               - ec2:DescribeInstance
               - ec2:CreateNetworkInterface
             Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*
+
 
 
 Outputs:
