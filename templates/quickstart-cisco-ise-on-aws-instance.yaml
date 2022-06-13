@@ -571,7 +571,7 @@ Parameters:
     Default: quickstart-cisco-ise-on-aws/
     Description: "S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/)."
     Type: String
-  EmailList:
+  EmailSubscription:
     Default: vesivaku@cisco.com
     Description: 'Email list which will be notified about the Deployment health and Failover status'
     Type: String
@@ -981,7 +981,7 @@ Resources:
    Properties:
      DisplayName: NotifyCiscoAdminTopic
      Subscription:
-       - Endpoint: !Ref EmailList
+       - Endpoint: !Ref EmailSubscription
          Protocol: "email"
      TopicName: NotifyCiscoAdminTopic
 
@@ -2059,9 +2059,9 @@ Resources:
   FailoverStateMachine:
     Type: AWS::StepFunctions::StateMachine
     DependsOn:
-    - CheckSPANGatewayStatusLambda
-    - PerformFailoverLambda
-    - CheckFailoverSuccessfulLambda
+      - CheckSPANGatewayStatusLambda
+      - PerformFailoverLambda
+      - CheckFailoverSuccessfulLambda
     Properties:
       RoleArn: !GetAtt StatesExecutionRole.Arn
       DefinitionString: !Sub |-
@@ -2082,7 +2082,7 @@ Resources:
                 {
                   "Variable": "$.PrimaryState",
                   "StringEquals": "running",
-                  "Next": "SNSPublishPPANHealthy"
+                  "Next": "PPAN is healthy. Failover not required!"
                 },
                 {
                   "And": [
@@ -2101,17 +2101,6 @@ Resources:
               "Default": "Wait-Polling  for PPAN status",
               "InputPath": "$"
             },
-            "SNSPublishPPANHealthy": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::sns:publish",
-              "Parameters": {
-
-                "Message": {
-                  "message": "PPAN is healthy. Failover is not required!"
-                }
-              },
-              "Next": "PPAN is healthy. Failover not required!"
-            },
             "Wait-Polling  for PPAN status": {
               "Type": "Wait",
               "Seconds": 20,
@@ -2127,7 +2116,7 @@ Resources:
             "Perform Failover": {
               "Type": "Task",
               "Resource": "${PerformFailoverLambda.Arn}",
-              "Next": "Wait - For SPAN to come up",
+              "Next": "Wait for Promotion",
               "ResultPath": "$.PromotionStatus",
               "InputPath": "$",
               "Catch": [
@@ -2135,15 +2124,10 @@ Resources:
                   "ErrorEquals": [
                     "States.Timeout"
                   ],
-                  "Next": "Wait - For SPAN to come up"
+                  "Next": "Wait for Promotion"
                 }
               ],
               "TimeoutSeconds": 180
-            },
-            "Wait - For SPAN to come up": {
-              "Type": "Wait",
-              "Seconds": 1800,
-              "Next": "Wait for Promotion"
             },
             "Choice - Is SPAN API Gateway enabled?": {
               "Type": "Choice",
@@ -2159,27 +2143,15 @@ Resources:
                   "Next": "Perform Failover"
                 }
               ],
-              "Default": "SNSPublishGatewayDisabled"
+              "Default": "SNSPublishGatewayDisabledDefault"
             },
             "SNSPublishGatewayDisabledDefault": {
               "Type": "Task",
               "Resource": "arn:aws:states:::sns:publish",
               "Parameters": {
-
-                "Message": {
-                  "message": "SPAN Gateway is disabled. Cannot proceed with failover"
-                }
-              },
-              "Next": "SPAN Gateway is down!"
-            },
-            "SNSPublishGatewayDisabled": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::sns:publish",
-              "Parameters": {
-
-                "Message": {
-                  "message": "SPAN Gateway is disabled. Cannot proceed with failover"
-                }
+                "Subject": "Update from Failover State machine",
+                "Message": "SPAN Gateway is disabled. \n Cannot proceed with failover",
+                "TopicArn": "${NotifyCiscoAdminTopic}"
               },
               "Next": "SPAN Gateway is down!"
             },
@@ -2234,10 +2206,9 @@ Resources:
               "Type": "Task",
               "Resource": "arn:aws:states:::sns:publish",
               "Parameters": {
-
-                "Message": {
-                  "message": "Failover is not successful!"
-                }
+                "Subject": "Update from Failover State machine",
+                "Message": "Failover is not successful!",
+                "TopicArn": "${NotifyCiscoAdminTopic}"
               },
               "Next": "Failure is unsuccessful"
             },
@@ -2245,10 +2216,9 @@ Resources:
               "Type": "Task",
               "Resource": "arn:aws:states:::sns:publish",
               "Parameters": {
-
-                "Message": {
-                  "message": "Failover is successful!"
-                }
+                "Subject": "Update from Failover State machine",
+                "Message": "Failover is successful!",
+                "TopicArn": "${NotifyCiscoAdminTopic}"
               },
               "Next": "Failover Successful"
             },
@@ -2264,7 +2234,6 @@ Resources:
             }
           }
         }
-
   CheckPPANStatusLambda:
     Type: AWS::Lambda::Function
     Properties:
