@@ -571,6 +571,10 @@ Parameters:
     Default: quickstart-cisco-ise-on-aws/
     Description: "S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/)."
     Type: String
+  EmailList:
+    Default: vesivaku@cisco.com
+    Description: 'Email list which will be notified about the Deployment health and Failover status'
+    Type: String
 
 Conditions:
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
@@ -972,6 +976,15 @@ Resources:
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
 
+  IseSNSTopic:
+   Type: AWS::SNS::Topic
+   Properties:
+     DisplayName: NotifyCiscoAdminTopic
+     Subscription:
+       - Endpoint: !Ref EmailList
+         Protocol: "email"
+     TopicName: NotifyCiscoAdminTopic
+
   #cloudwatch alarms
   ISENode1AutorecoverAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -1238,7 +1251,7 @@ Resources:
         Version: 2012-10-17
         Statement:
           - Effect: Allow
-            Action: "lambda:InvokeFunction"
+            Action: ["lambda:InvokeFunction", "sns:publish"]
             Resource: "*"
       Roles:
         - !Ref StatesExecutionRole
@@ -1298,7 +1311,7 @@ Resources:
                   sys.exit(1)
 
           def handler(event, context):
-              ssm_client = boto3.client('ssm',region_name="us-east-1")
+              ssm_client = boto3.client('ssm',region_name=runtime_region)
               timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
               try:
 
@@ -1356,7 +1369,7 @@ Resources:
                     return "pending"
 
 
-                              
+
 
               except Exception as e:
                 logging.error('Exception: %s' % e, exc_info=True)
@@ -1442,8 +1455,8 @@ Resources:
 
           def handler(event, context):
 
-
-            ssm_client = boto3.client('ssm',region_name="us-east-1")
+            runtime_region = os.environ['AWS_REGION']
+            ssm_client = boto3.client('ssm',region_name=runtime_region)
             timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
             logger.info("#Retriving SSM parameters...")
             PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
@@ -1558,7 +1571,8 @@ Resources:
                   sys.exit(1)
 
           def handler(event, context):
-              ssm_client = boto3.client('ssm',region_name="us-east-1")
+              runtime_region = os.environ['AWS_REGION']
+              ssm_client = boto3.client('ssm',region_name=runtime_region)
               timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
               logger.info("#Retriving SSM parameters...")
               PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
@@ -1698,7 +1712,8 @@ Resources:
 
           def handler(event, context):
               timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
-              ssm_client = boto3.client('ssm',region_name="us-east-1")
+              runtime_region = os.environ['AWS_REGION']
+              ssm_client = boto3.client('ssm',region_name=runtime_region)
               try:
                   logger.info("#Retriving SSM parameters...")
                   PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
@@ -1825,7 +1840,8 @@ Resources:
             timer.start()
             logger.info('Received event: %s' % json.dumps(event))
             logger.info(event['ResourceProperties']['WaitHandle'])
-            ssm_client = boto3.client('ssm',region_name="us-east-1")
+            runtime_region = os.environ['AWS_REGION']
+            ssm_client = boto3.client('ssm',region_name=runtime_region)
             try:
               logger.info("#Retriving SSM parameters...")
               SYNC_STATUS = get_ssm_parameter(ssm_client,"SyncStatus")
@@ -1953,8 +1969,8 @@ Resources:
               )
 
                   return response
-
-              ssm_client = boto3.client('ssm',region_name="us-east-1")
+              runtime_region = os.environ['AWS_REGION']
+              ssm_client = boto3.client('ssm',region_name=runtime_region)
               try:
                   logger.info("#Retriving SSM parameters...")
                   PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
@@ -2066,7 +2082,7 @@ Resources:
                 {
                   "Variable": "$.PrimaryState",
                   "StringEquals": "running",
-                  "Next": "PPAN is healthy. Failover not required!"
+                  "Next": "SNSPublishPPANHealthy"
                 },
                 {
                   "And": [
@@ -2084,6 +2100,17 @@ Resources:
               ],
               "Default": "Wait-Polling  for PPAN status",
               "InputPath": "$"
+            },
+            "SNSPublishPPANHealthy": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::sns:publish",
+              "Parameters": {
+
+                "Message": {
+                  "message": "PPAN is healthy. Failover is not required!"
+                }
+              },
+              "Next": "PPAN is healthy. Failover not required!"
             },
             "Wait-Polling  for PPAN status": {
               "Type": "Wait",
@@ -2124,7 +2151,7 @@ Resources:
                 {
                   "Variable": "$.SecondaryState",
                   "StringEquals": "GatewayDown",
-                  "Next": "SPAN Gateway is down!"
+                  "Next": "SNSPublishGatewayDisabledDefault"
                 },
                 {
                   "Variable": "$.SecondaryState",
@@ -2132,7 +2159,29 @@ Resources:
                   "Next": "Perform Failover"
                 }
               ],
-              "Default": "SPAN Gateway is down!"
+              "Default": "SNSPublishGatewayDisabled"
+            },
+            "SNSPublishGatewayDisabledDefault": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::sns:publish",
+              "Parameters": {
+
+                "Message": {
+                  "message": "SPAN Gateway is disabled. Cannot proceed with failover"
+                }
+              },
+              "Next": "SPAN Gateway is down!"
+            },
+            "SNSPublishGatewayDisabled": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::sns:publish",
+              "Parameters": {
+
+                "Message": {
+                  "message": "SPAN Gateway is disabled. Cannot proceed with failover"
+                }
+              },
+              "Next": "SPAN Gateway is down!"
             },
             "SPAN Gateway is down!": {
               "Type": "Fail",
@@ -2157,7 +2206,7 @@ Resources:
                 {
                   "Variable": "$.FailoverStatus",
                   "StringEquals": "success",
-                  "Next": "Failover Successful"
+                  "Next": "SNSPublishFailoverSuccessful"
                 },
                 {
                   "And": [
@@ -2175,11 +2224,33 @@ Resources:
                 {
                   "Variable": "$.FailoverStatus",
                   "StringEquals": "failure",
-                  "Next": "Failure is unsuccessful"
+                  "Next": "SNSPublishFailoverUnsuccessful"
                 }
               ],
               "Default": "Wait for Promotion",
               "InputPath": "$"
+            },
+            "SNSPublishFailoverUnsuccessful": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::sns:publish",
+              "Parameters": {
+
+                "Message": {
+                  "message": "Failover is not successful!"
+                }
+              },
+              "Next": "Failure is unsuccessful"
+            },
+            "SNSPublishFailoverSuccessful": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::sns:publish",
+              "Parameters": {
+
+                "Message": {
+                  "message": "Failover is successful!"
+                }
+              },
+              "Next": "Failover Successful"
             },
             "Failure is unsuccessful": {
               "Type": "Fail",
@@ -2230,8 +2301,8 @@ Resources:
               )
 
                   return response
-
-              ssm_client = boto3.client('ssm',region_name="us-east-1")
+              runtime_region = os.environ['AWS_REGION']
+              ssm_client = boto3.client('ssm',region_name=runtime_region)
               try:
                   logger.info("#Retriving SSM parameters...")
                   PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
@@ -2372,7 +2443,8 @@ Resources:
 
           def handler(event, context):
               timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
-              ssm_client = boto3.client('ssm',region_name="us-east-1")
+              runtime_region = os.environ['AWS_REGION']
+              ssm_client = boto3.client('ssm',region_name=runtime_region)
               try:
                   logger.info("#Retriving SSM parameters...")
                   PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
@@ -2499,7 +2571,8 @@ Resources:
 
           def handler(event, context):
               timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
-              ssm_client = boto3.client('ssm',region_name="us-east-1")
+              runtime_region = os.environ['AWS_REGION']
+              ssm_client = boto3.client('ssm',region_name=runtime_region)
               try:
                   logger.info("#Retriving SSM parameters...")
                   PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
@@ -2620,7 +2693,8 @@ Resources:
 
           def handler(event, context):
               timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
-              ssm_client = boto3.client('ssm',region_name="us-east-1")
+              runtime_region = os.environ['AWS_REGION']
+              ssm_client = boto3.client('ssm',region_name=runtime_region)
               try:
                   logging.info("#Retriving SSM parameters...")
                   PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
@@ -2727,7 +2801,6 @@ Resources:
               - ec2:DescribeInstance
               - ec2:CreateNetworkInterface
             Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*
-
 
 
 Outputs:
