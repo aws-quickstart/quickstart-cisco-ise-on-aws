@@ -976,7 +976,7 @@ Resources:
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
 
-  IseSNSTopic:
+  NotifyCiscoAdminTopic:
    Type: AWS::SNS::Topic
    Properties:
      DisplayName: NotifyCiscoAdminTopic
@@ -1141,19 +1141,27 @@ Resources:
               "Type": "Task",
               "Resource": "${CheckISEStatusLambda.Arn}",
               "Next": "If ISE is up and running",
-              "ResultPath": "$.PrimaryState",
-              "InputPath": "$"
+              "InputPath": "$",
+              "ResultPath": "$.taskresult"
             },
             "If ISE is up and running": {
               "Type": "Choice",
               "Choices": [
                 {
-                  "Variable": "$.PrimaryState",
-                  "StringEquals": "pending",
-                  "Next": "Wait for ISE to come up"
+                  "And": [
+                    {
+                      "Variable": "$.taskresult.IseState",
+                      "StringEquals": "pending"
+                    },
+                    {
+                      "Variable": "$.taskresult.retries",
+                      "StringEquals": "0"
+                    }
+                  ],
+                  "Next": "ISE instance is not running"
                 },
                 {
-                  "Variable": "$.PrimaryState",
+                  "Variable": "$.taskresult.IseState",
                   "StringEquals": "running",
                   "Next": "Set Primary PAN"
                 }
@@ -1163,22 +1171,38 @@ Resources:
             },
             "Wait for ISE to come up": {
               "Type": "Wait",
-              "Seconds": 300,
+              "Seconds": 180,
               "Next": "Check ISE status"
             },
             "Set Primary PAN": {
               "Type": "Task",
               "Resource": "${SetPrimaryPANLambda.Arn}",
               "InputPath": "$",
-              "ResultPath": "$.NodeId",
-              "Next": "Register Secondary Node"
+              "Next": "Register Secondary Node",
+              "Catch": [
+                {
+                  "ErrorEquals": [
+                    "States.ALL"
+                  ],
+                  "Next": "Fail: Error Occured"
+                }
+              ],
+              "ResultPath": "$.taskresult"
             },
             "Register Secondary Node": {
               "Type": "Task",
               "Resource": "${RegisterSecondaryNodeLambda.Arn}",
               "InputPath": "$",
-              "ResultPath": "$.PrimaryState",
-              "Next": "Wait for Sync to complete"
+              "Next": "Wait for Sync to complete",
+              "Catch": [
+                {
+                  "ErrorEquals": [
+                    "States.ALL"
+                  ],
+                  "Next": "Fail: Error Occured"
+                }
+              ],
+              "ResultPath": "$.taskresult"
             },
             "Wait for Sync to complete": {
               "Type": "Wait",
@@ -1189,35 +1213,43 @@ Resources:
               "Type": "Task",
               "Resource": "${CheckSyncStatusLambda.Arn}",
               "InputPath": "$",
-              "ResultPath": "$.PrimaryState",
-              "Next": "Is Sync complete?"
+              "Next": "Is Sync complete?",
+              "ResultPath": "$.taskresult"
             },
             "Is Sync complete?": {
               "Type": "Choice",
               "Choices": [
                 {
-                  "Variable": "$.PrimaryState",
-                  "StringEquals": "running",
+                  "Variable": "$.taskresult.SyncStatus",
+                  "StringEquals": "SYNC_COMPLETED",
                   "Next": "Send Cfn Response"
                 },
                 {
-                  "Variable": "$.PrimaryState",
-                  "StringEquals": "pending",
-                  "Next": "Wait for Sync to complete"
+                  "And": [
+                    {
+                      "Variable": "$.taskresult.SyncStatus",
+                      "StringEquals": "SYNC_INPROGRESS"
+                    },
+                    {
+                      "Variable": "$.taskresult.retries",
+                      "StringEquals": "0"
+                    }
+                  ],
+                  "Next": "Secondary node Sync failed"
                 },
                 {
-                  "Variable": "$.PrimaryState",
-                  "StringEquals": "failure",
-                  "Next": "Send Cfn Response"
+                  "Variable": "$.taskresult.SyncStatus",
+                  "StringEquals": "SYNC_FAILED",
+                  "Next": "Secondary node Sync failed"
                 }
               ],
-              "Default": "Wait for Sync to complete"
+              "Default": "Wait for Sync to complete",
+              "InputPath": "$"
             },
             "Send Cfn Response": {
               "Type": "Task",
               "Resource": "${CallbackLambda.Arn}",
               "InputPath": "$",
-              "End": true,
               "Retry": [
                 {
                   "ErrorEquals": [
@@ -1227,7 +1259,25 @@ Resources:
                   "MaxAttempts": 3,
                   "BackoffRate": 2
                 }
+              ],
+              "End": true,
+              "Catch": [
+                {
+                  "ErrorEquals": [
+                    "States.ALL"
+                  ],
+                  "Next": "Fail: Error Occured"
+                }
               ]
+            },
+            "Fail: Error Occured": {
+              "Type": "Fail"
+            },
+            "Secondary node Sync failed": {
+              "Type": "Fail"
+            },
+            "ISE instance is not running": {
+              "Type": "Fail"
             }
           }
         }
@@ -1280,7 +1330,7 @@ Resources:
           from botocore.vendored import requests
           import boto3
           import sys
-
+          import os
           import socket
 
           logging.basicConfig(stream = sys.stdout)
@@ -1311,6 +1361,7 @@ Resources:
                   sys.exit(1)
 
           def handler(event, context):
+              runtime_region = os.environ['AWS_REGION']
               ssm_client = boto3.client('ssm',region_name=runtime_region)
               timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
               try:
@@ -1343,33 +1394,41 @@ Resources:
                   logger.info("Secondary Polcy Administration node fqdn : {}".format(Secondary_FQDN))
                   data = {}
                   nodes_to_check = [PPAN_IP, SPAN_IP]
-                  retries = 5
-                  while nodes_to_check and retries:
-                      for ip in nodes_to_check:
-                          url = 'https://{}/api/v1/deployment/node'.format(ip)
-                          try:
-                              resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
-                              logger.info("API response for {} is {} ".format(ip, resp.text))
-                              if resp.status_code == 200:
-                                  nodes_to_check.remove(ip)
-                                  logger.info("ISE - {} is up and running".format(ip))
+                  nodes_list = [PPAN_IP, SPAN_IP]
+                  retries = int(get_ssm_parameter(ssm_client,"Retries"))
+                  if "taskresult" in event:
+                      retries = int(event['taskresult']['retries'])
+                  for ip in nodes_to_check:
+                      url = 'https://{}/api/v1/deployment/node'.format(ip)
+                      try:
+                          resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
+                          logger.info("API response for {} is {} ".format(ip, resp.text))
+                          if resp.status_code == 200:
+                              nodes_list.remove(ip)
+                              logger.info("ISE - {} is up and running".format(ip))
 
-                                  timer.cancel()
-                                  return "running"
+                      except Exception as e:
+                          logging.error('Exception: %s' % e, exc_info=True)
+                          logger.error("Exception occured while executing get node details api for {}".format(ip))
+                          retries -= 1
+                          return {
+                                  "IseState": "pending",
+                                  "retries": str(retries)
+                                  }
 
-                          except Exception as e:
-                              logging.error('Exception: %s' % e, exc_info=True)
-                              logger.error("Exception occured while executing get node details api for {}".format(PPAN_IP))
-                              retries -= 1
-                              time.sleep(2)
-
-
-                  if nodes_to_check:
+                  if nodes_list:
                     timer.cancel()
-                    return "pending"
-
-
-
+                    retries -= 1
+                    return {
+                              "IseState": "pending",
+                              "retries": str(retries)
+                            }
+                  else:
+                    timer.cancel()
+                    return {
+                              "IseState": "running",
+                              "retries": "0"
+                            }
 
               except Exception as e:
                 logging.error('Exception: %s' % e, exc_info=True)
@@ -1427,6 +1486,7 @@ Resources:
           from botocore.vendored import requests
           import boto3
           import sys
+          import os
 
 
           logging.basicConfig(stream = sys.stdout)
@@ -1481,7 +1541,9 @@ Resources:
               if resp.status_code == 200:
                   logger.info("##### Standalone to Primary Successful on {} #####".format(PPAN_IP))
                   timer.cancel()
-                  return "running"
+                  return {
+                            "task_status": "Done"
+                          }
               raise PromoteToPrimaryFailed({"Setting ISE Node to Primary Failed"})
 
             except Exception as e:
@@ -1545,6 +1607,7 @@ Resources:
           from botocore.vendored import requests
           import boto3
           import sys
+          import os
 
 
           logging.basicConfig(stream = sys.stdout)
@@ -1608,7 +1671,9 @@ Resources:
                 if resp.status_code == 200:
                     logger.info("Register Secondary node is successfull, API response is {}".format(resp.text))
                     timer.cancel()
-                    return "running"
+                    return {
+                            "task_status": "Done"
+                          }
                 raise RegisterSecondaryNodeFailed({"Register Secondary node to form deployment Failed"})
 
 
@@ -1680,6 +1745,7 @@ Resources:
           from botocore.vendored import requests
           import boto3
           import sys
+          import os
 
 
           logging.basicConfig(stream = sys.stdout)
@@ -1728,6 +1794,9 @@ Resources:
                   logger.info("API_HEADER : {}".format(API_HEADER))
 
                   data = {}
+                  retries = int(get_ssm_parameter(ssm_client,"Retries"))
+                  if "taskresult" in event:
+                      retries = int(event['taskresult']['retries'])
 
                   url = 'https://{}/api/v1/deployment/node'.format(PPAN_IP)
                   try:
@@ -1739,7 +1808,10 @@ Resources:
                         if json_resp["response"][0]['nodeStatus'] == "Connected":
                           set_ssm_parameter(ssm_client,"SyncStatus","SYNC_COMPLETED")
                           timer.cancel()
-                          return "running"
+                          return {
+                                    "SyncStatus": "SYNC_COMPLETED",
+                                    "retries": "0"
+                                  }
                         elif json_resp["response"][0]['nodeStatus'] == "RegistrationFailed":
 
                           set_ssm_parameter(ssm_client,"SyncStatus","SYNC_FAILED")
@@ -1747,21 +1819,36 @@ Resources:
                           response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
                           logger.info(response)
                           timer.cancel()
-                          return "failure"
+                          return {
+                                    "SyncStatus": "SYNC_FAILED",
+                                    "retries": "0"
+                                  }
                         else:
                           timer.cancel()
-                          return "pending"
+                          retries -= 1
+                          return {
+                                    "SyncStatus": "SYNC_INPROGRESS",
+                                    "retries": str(retries)
+                                  }
 
                   except Exception as e:
                       logging.error('Exception: %s' % e, exc_info=True)
                       logger.info("Exception occured while executing get node details api for {}".format(PPAN_IP))
                       timer.cancel()
-                      return "pending"
+                      retries -= 1
+                      return {
+                                "SyncStatus": "SYNC_INPROGRESS",
+                                "retries": str(retries)
+                              }
 
               except Exception as e:
                 timer.cancel()
                 logging.error('Exception: %s' % e, exc_info=True)
-                return "pending"
+                retries -= 1
+                return {
+                          "SyncStatus": "SYNC_INPROGRESS",
+                          "retries": str(retries)
+                        }
 
       Handler: index.handler
       Role: !GetAtt CheckSyncStatusExecutionRole.Arn
@@ -1814,7 +1901,7 @@ Resources:
           from botocore.vendored import requests
           import sys
           import boto3
-
+          import os
 
           logging.basicConfig(stream = sys.stdout)
           logger = logging.getLogger()
@@ -1822,10 +1909,10 @@ Resources:
 
 
           def timeout(event, context):
-            logging.error('Execution is about to time out, sending failure response to CloudFormation')
-            requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
-            response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
-            sys.exit(1)
+                  logging.error('Execution is about to time out, sending failure response to CloudFormation')
+                  requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
+                  response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                  sys.exit(1)
 
 
           def get_ssm_parameter(ssm_client, ssm_parameter_name):
@@ -1833,34 +1920,34 @@ Resources:
                   Name=ssm_parameter_name,
                   WithDecryption=False
               )
-
                   return param_value.get('Parameter').get('Value')
+
           def handler(event, context):
-            timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 2, timeout, args=[event, context])
-            timer.start()
-            logger.info('Received event: %s' % json.dumps(event))
-            logger.info(event['ResourceProperties']['WaitHandle'])
-            runtime_region = os.environ['AWS_REGION']
-            ssm_client = boto3.client('ssm',region_name=runtime_region)
-            try:
-              logger.info("#Retriving SSM parameters...")
-              SYNC_STATUS = get_ssm_parameter(ssm_client,"SyncStatus")
-              if SYNC_STATUS == 'SYNC_COMPLETED':
-                logger.info("Sync is successful")
-                requests_data=json.dumps(dict(Status='SUCCESS',Reason='Deployment creation successful',UniqueId='ISENodeStates',Data='success')).encode('utf-8')
-              else:
+              timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 2, timeout, args=[event, context])
+              timer.start()
+              logger.info('Received event: %s' % json.dumps(event))
+              logger.info(event['ResourceProperties']['WaitHandle'])
+              runtime_region = os.environ['AWS_REGION']
+              ssm_client = boto3.client('ssm',region_name=runtime_region)
+              try:
+                logger.info("#Retriving SSM parameters...")
+                SYNC_STATUS = get_ssm_parameter(ssm_client,"SyncStatus")
+                if SYNC_STATUS == 'SYNC_COMPLETED':
+                  logger.info("Sync is successful")
+                  requests_data=json.dumps(dict(Status='SUCCESS',Reason='Deployment creation successful',UniqueId='ISENodeStates',Data='success')).encode('utf-8')
+                else:
+                  logger.info("Sync failed")
+                  requests_data=json.dumps(dict(Status='FAILURE',Reason='Invalid Deployment Status',UniqueId='ISENodeStates',Data='failure')).encode('utf-8')
+                response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                logger.info(response)
+                timer.cancel()
+              except Exception as e:
                 logger.info("Sync failed")
-                requests_data=json.dumps(dict(Status='FAILURE',Reason='Invalid Deployment Status',UniqueId='ISENodeStates',Data='failure')).encode('utf-8')
-              response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
-              logger.info(response)
-              timer.cancel()
-            except Exception as e:
-              logger.info("Sync failed")
-              logging.error('Exception: %s' % e, exc_info=True)
-              requests_data=json.dumps(dict(Status='FAILURE',Reason='Exception: %s' % e,UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
-              response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
-              logger.info(response)
-              timer.cancel()
+                logging.error('Exception: %s' % e, exc_info=True)
+                requests_data=json.dumps(dict(Status='FAILURE',Reason='Exception: %s' % e,UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
+                response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                logger.info(response)
+                timer.cancel()
 
       Handler: index.handler
       Runtime: python3.6
@@ -1946,6 +2033,7 @@ Resources:
           from botocore.vendored import requests
           import boto3
           import sys
+          import os
 
           logging.basicConfig(stream = sys.stdout)
           logger = logging.getLogger()
@@ -2247,6 +2335,7 @@ Resources:
           from botocore.vendored import requests
           import boto3
           import sys
+          import os
 
           logging.basicConfig(stream = sys.stdout)
           logger = logging.getLogger()
@@ -2306,6 +2395,8 @@ Resources:
                                   "PrimaryState": "running",
                                   "retries": "0"
                                       }
+                      else:
+                          raise RuntimeError('Failed to get successful response from PPAN')
 
                   except Exception as e:
                       logger.error("Exception occured while executing get node details api for {}".format(PPAN_IP))
@@ -2381,6 +2472,7 @@ Resources:
           from botocore.vendored import requests
           import boto3
           import sys
+          import os
 
           logging.basicConfig(stream = sys.stdout)
           logger = logging.getLogger()
@@ -2444,6 +2536,8 @@ Resources:
                                   logging.info("SPAN - {} has API gateway enabled".format(SPAN_IP))
                                   timer.cancel()
                                   return "running"
+                      else:
+                          raise RuntimeError('Failed to get successful response from SPAN')
                   except Exception as e:
                       logger.error("Exception occured while executing get node details api for {}".format(SPAN_IP))
                       logger.error("API Gateway is not enabled".format(SPAN_IP))
@@ -2509,6 +2603,7 @@ Resources:
           from botocore.vendored import requests
           import boto3
           import sys
+          import os
 
           logging.basicConfig(stream = sys.stdout)
           logger = logging.getLogger()
@@ -2568,6 +2663,8 @@ Resources:
                           logging.info("SPAN to PPAN Promotion successful for - {}".format(SPAN_IP))
                           timer.cancel()
                           return "running"
+                      else:
+                          raise RuntimeError('Failed to get promote SPAN to PPAN')
                   except Exception as e:
                       logging.error("Exception occured while promoting SPAN {}".format(SPAN_IP))
                       logging.error('Exception: %s' % e, exc_info=True)
@@ -2631,6 +2728,7 @@ Resources:
           from botocore.vendored import requests
           import boto3
           import sys
+          import os
 
           logging.basicConfig(stream = sys.stdout)
           logger = logging.getLogger()
@@ -2704,6 +2802,8 @@ Resources:
                                         "FailoverStatus": "success",
                                         "failover_retries": str(retries)
                                         }
+                      else:
+                          raise RuntimeError('Failed to get node details from new PPAN')
                   except Exception as e:
                       print("Exception occured while executing get node details api for {}".format(SPAN_IP))
                       if "failover_retries" in event:
