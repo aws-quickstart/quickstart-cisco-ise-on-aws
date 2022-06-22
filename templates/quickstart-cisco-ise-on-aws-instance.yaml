@@ -91,6 +91,18 @@ Parameters:
       - rate(10 minutes)
       - rate(60 minutes)
     Type: String
+
+  HealthcheckPollingRate:
+    Description:
+      The rate (frequency) that determines when CloudWatch Events runs the rule that
+      triggers the Route Monitor Lambda function.
+    Default: rate(10 minute)
+    AllowedValues:
+      - rate(1 minute)
+      - rate(10 minutes)
+      - rate(60 minutes)
+    Type: String
+
   Node1Hostname:
     Description: >-
       Enter the hostname. This field only supports alphanumeric characters and
@@ -802,7 +814,7 @@ Resources:
         ResourceRecords:
           - !GetAtt ISENode1.PrivateIp
 
-          
+
 
         Type: A
         TTL: "300"
@@ -812,7 +824,7 @@ Resources:
             - !Ref DNSDomain
         ResourceRecords:
           - !GetAtt ISENode2.PrivateIp
-          
+
 
         Type: A
         TTL: "300"
@@ -1092,6 +1104,14 @@ Resources:
       Name: Retries
       Type: String
       Value: 5
+
+  MaintenanceParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: Set this parameter to True for Maintenance
+      Name: Maintenance
+      Type: String
+      Value: False
 
   DeploymentStateMachineLambdaRole:
     Type: AWS::IAM::Role
@@ -2003,6 +2023,7 @@ Resources:
       - arn:aws:iam::aws:policy/AmazonEC2FullAccess
       - arn:aws:iam::aws:policy/AmazonSSMFullAccess
       - arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess
+      - arn:aws:iam::aws:policy/AmazonSNSFullAccess
       Path: "/"
       Policies:
       - PolicyName: root
@@ -2034,7 +2055,6 @@ Resources:
           import boto3
           import sys
           import os
-
           logging.basicConfig(stream = sys.stdout)
           logger = logging.getLogger()
           logger.setLevel(logging.INFO)
@@ -2057,7 +2077,19 @@ Resources:
               )
 
                   return response
+
+              def send_sns_publish(subject, message):
+                  client = boto3.client('sns')
+                  TopicArn = [item["TopicArn"] for item in client.list_topics()['Topics'] if "NotifyCiscoAdminTopic" in item["TopicArn"]]
+                  logger.info("Sending SNS publish..")
+                  response = client.publish(
+                      Subject= subject,
+                      Message= message,
+                      TopicArn= TopicArn[0]
+                      )
+
               runtime_region = os.environ['AWS_REGION']
+
               ssm_client = boto3.client('ssm',region_name=runtime_region)
               try:
                   logger.info("#Retriving SSM parameters...")
@@ -2069,49 +2101,47 @@ Resources:
                   API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
                   API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
                   retries = get_ssm_parameter(ssm_client,"Retries")
+                  maintenance = get_ssm_parameter(ssm_client,"Maintenance")
                   logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
                   logger.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
                   logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
                   logger.info("API_AUTH : {}".format(API_AUTH))
                   logger.info("API_HEADER : {}".format(API_HEADER))
                   logger.info("Retries : {}".format(retries))
-
+                  node_status = ["NotApplicable", "NotInSync", "NotUpgraded", "RegistrationFailed", "ReplicationStopped"]
                   data = {}
 
-                  if SyncStatus == "pending":
-                      logger.info("Application still being deployed. Failover not required!")
-                      return "skip"
-                  elif SyncStatus == "SYNC_FAILED":
-                      logger.info("Need not execute Failover state machine. Failover can be triggered only for successful deployment.")
-                      return "skip"
-                  elif SyncStatus == "MAINTENANCE":
-                      logger.info("Need not execute Failover state machine. PPAN is under maintenance!")
-                      return "skip"
-                  elif SyncStatus == "SYNC_COMPLETED":
-                      stepFunction = boto3.client('stepfunctions')
-                      response = stepFunction.list_state_machines(
-                              maxResults=123
-                          )
-                      response = response['stateMachines']
-                      failover_state_machine_Arn = ""
-                      for item in response:
-                          logger.debug("Identifying Failover statemachine Arn")
-                          if "FailoverStateMachine" in item['stateMachineArn']:
-                              logger.debug("FailoverStateMachine Arn : {}".format(item['stateMachineArn']))
-                              failover_state_machine_Arn = item['stateMachineArn']
+                  if not bool(Maintenance):
 
-                      response = stepFunction.start_execution(
-                              stateMachineArn=failover_state_machine_Arn
-                          )
+                      if SyncStatus == "InProgress":
+                          logger.info("Sync status is {}", SyncStatus)
+                          logger.info("Application still being deployed. Failover not required!")
+                          return "skip"
 
-                  else:
-                      logger.info("Need not execute Failover state machine. Sync status is unknown.")
-                      return "skip"
+                      elif SyncStatus == "Connected":
+                          stepFunction = boto3.client('stepfunctions')
+                          response = stepFunction.start_execution(
+                                  stateMachineArn='arn:aws:states:us-east-1:730882916506:stateMachine:FailoverStateMachine-IUFsEDvr4Kc9'
+                              )
+
+                      elif SyncStatus == "Disconnected:
+                          logger.info("Sync status is {}", SyncStatus)
+                          logger.info("One of the ISE nodes is down \n Need not execute Failover state machine.")
+                          # send_sns_publish(subject="Deployment health check notification: Failover not triggered", message = "One of the ISE nodes is down. Need not execute Failover state machine.")
+                          return "skip"
+
+                      elif SyncStatus in node_status:
+                          logger.info("Sync status is {}", SyncStatus)
+                          logger.info("One of the ISE nodes is not in sync. Manual sync required. \n Need not execute Failover state machine.")
+                          # send_sns_publish(subject="Deployment health check notification: Failover not triggered", message = "One of the ISE nodes is not in sync. Manual sync required. Need not execute Failover state machine.")
+                          return "skip"
+                      else:
+                          logger.info("Need not execute Failover state machine. Sync status is unknown.")
+                          return "skip"
+
 
               except Exception as e:
                 logging.error('Exception: %s' % e, exc_info=True)
-                return int(get_ssm_parameter(ssm_client,"Retries"))
-
 
       MemorySize: 3008
       VpcConfig:
@@ -2143,6 +2173,147 @@ Resources:
           Id: LambdaSchedule
     DependsOn:
       - TriggerFailoverLambda
+      - DeploymentStateMachine
+
+  HealthCheckLambdaSchedulePermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Sub ${HealthCheckLambda.Arn}
+      Principal: 'events.amazonaws.com'
+      SourceArn: !Sub ${LambdaSchedule.Arn}
+    DependsOn:
+      - HealthCheckLambdaSchedule
+
+  HealthCheckLambdaSchedule:
+    Type: "AWS::Events::Rule"
+    Properties:
+      Description: >
+        A schedule for the Health check Lambda function..
+      ScheduleExpression: !Ref HealthcheckPollingRate
+      State: ENABLED
+      Targets:
+        - Arn: !Sub ${HealthCheckLambda.Arn}
+          Id: HealthCheckLambdaSchedule
+    DependsOn:
+      - HealthCheckLambda
+      - DeploymentStateMachine
+
+  HealthCheckLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+      - arn:aws:iam::aws:policy/AmazonSNSFullAccess
+      Path: "/"
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+              - ec2:DescribeInstance
+              - ec2:CreateNetworkInterface
+
+            Resource: !Sub arn:${AWS::Partition}:ec2:*:*:*
+
+  HealthCheckLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Monitors the deployment and modifies Sync status in SSM parameter store
+      Timeout: 300
+      Role: !GetAtt 'HealthCheckLambdaExecutionRole.Arn'
+      Handler: index.handler
+      Runtime: python3.6
+      Code:
+        ZipFile: !Sub |
+          import json
+          import logging
+          import threading
+          import time
+          from botocore.vendored import requests
+          import boto3
+          import sys
+          import os
+          logging.basicConfig(stream = sys.stdout)
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def handler(event, context):
+              def get_ssm_parameter(ssm_client, ssm_parameter_name):
+                  param_value = ssm_client.get_parameter(
+                  Name=ssm_parameter_name,
+                  WithDecryption=False
+              )
+
+                  return param_value.get('Parameter').get('Value')
+
+              def set_ssm_parameter(ssm_client, ssm_parameter_name, value, Overwrite=True, Type="String"):
+                  response = ssm_client.put_parameter(
+                  Name=ssm_parameter_name,
+                  Value=value,
+                  Overwrite=True,
+                  Type="String"
+              )
+
+                  return response
+
+              def send_sns_publish(subject, message):
+                  client = boto3.client('sns')
+                  TopicArn = [item["TopicArn"] for item in client.list_topics()['Topics'] if "NotifyCiscoAdminTopic" in item["TopicArn"]]
+                  logger.info("Sending SNS publish..")
+                  response = client.publish(
+                      Subject= subject,
+                      Message= message,
+                      TopicArn= TopicArn[0]
+                      )
+
+              runtime_region = os.environ['AWS_REGION']
+
+              ssm_client = boto3.client('ssm',region_name=runtime_region)
+              try:
+                  logger.info("#Retriving SSM parameters...")
+                  PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
+                  SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
+                  SyncStatus = get_ssm_parameter(ssm_client,"SyncStatus")
+                  ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
+                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
+                  API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
+                  API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+                  retries = get_ssm_parameter(ssm_client,"Retries")
+                  maintenance = get_ssm_parameter(ssm_client,"Maintenance")
+                  logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
+                  logger.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
+                  logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
+                  logger.info("API_AUTH : {}".format(API_AUTH))
+                  logger.info("API_HEADER : {}".format(API_HEADER))
+                  logger.info("Retries : {}".format(retries))
+                  node_status = ["NotApplicable", "NotInSync", "NotUpgraded", "RegistrationFailed", "ReplicationStopped"]
+                  data = {}
+                  url = 'https://{}/api/v1/deployment/node'.format(PPAN_IP)
+                  resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
+                  logger.info("API response for checking node sync status and roles is: {} ".format(resp.text))
+                  if json_resp["response"][0]['nodeStatus'] == "Connected":
+                      set_ssm_parameter(ssm_client,"SyncStatus","SYNC_COMPLETED")
+                  else :
+                      set_ssm_parameter(ssm_client,"SyncStatus","SYNC_FAILED")
+                      send_sns_publish(subject="Deployment health check notification: Secondary Node is not in sync with Primary Node", message = "Secondary Node is not in sync with Primary Node.")
+
+              except Exception as e:
+                logging.error('Exception: %s' % e, exc_info=True)
 
   FailoverStateMachine:
     Type: AWS::StepFunctions::StateMachine
@@ -2150,6 +2321,7 @@ Resources:
       - CheckSPANGatewayStatusLambda
       - PerformFailoverLambda
       - CheckFailoverSuccessfulLambda
+      - DeploymentStateMachine
     Properties:
       RoleArn: !GetAtt StatesExecutionRole.Arn
       DefinitionString: !Sub |-
@@ -2238,7 +2410,7 @@ Resources:
               "Resource": "arn:aws:states:::sns:publish",
               "Parameters": {
                 "Subject": "Update from Failover State machine",
-                "Message": "SPAN Gateway is disabled. \n Cannot proceed with failover",
+                "Message": "SPAN Gateway is disabled. \nCannot proceed with failover",
                 "TopicArn": "${NotifyCiscoAdminTopic}"
               },
               "Next": "SPAN Gateway is down!"
