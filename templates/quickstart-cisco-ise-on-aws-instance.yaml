@@ -96,7 +96,7 @@ Parameters:
     Description:
       The rate (frequency) that determines when CloudWatch Events runs the rule that
       triggers the Route Monitor Lambda function.
-    Default: rate(10 minute)
+    Default: rate(10 minutes)
     AllowedValues:
       - rate(1 minute)
       - rate(10 minutes)
@@ -1825,14 +1825,14 @@ Resources:
                       if resp.status_code == 200:
                         json_resp = json.loads(resp.content.decode("utf-8"))
 
-                        if json_resp["response"][0]['nodeStatus'] == "Connected":
+                        if json_resp["response"][0]['nodeStatus'] == "Connected" and json_resp["response"][1]['nodeStatus'] == "Connected":
                           set_ssm_parameter(ssm_client,"SyncStatus","SYNC_COMPLETED")
                           timer.cancel()
                           return {
                                     "SyncStatus": "SYNC_COMPLETED",
                                     "retries": "0"
                                   }
-                        elif json_resp["response"][0]['nodeStatus'] == "RegistrationFailed":
+                        elif json_resp["response"][1]['nodeStatus'] == "RegistrationFailed":
 
                           set_ssm_parameter(ssm_client,"SyncStatus","SYNC_FAILED")
                           requests_data=json.dumps(dict(Status='FAILURE',Reason='Secondary Node Sync or Registration failed',UniqueId='ISENodeStates',Data='exception')).encode('utf-8')
@@ -2060,88 +2060,89 @@ Resources:
           logger.setLevel(logging.INFO)
 
           def handler(event, context):
-              def get_ssm_parameter(ssm_client, ssm_parameter_name):
-                  param_value = ssm_client.get_parameter(
-                  Name=ssm_parameter_name,
-                  WithDecryption=False
-              )
+            def get_ssm_parameter(ssm_client, ssm_parameter_name):
+                param_value = ssm_client.get_parameter(
+                Name=ssm_parameter_name,
+                WithDecryption=False
+            )
 
-                  return param_value.get('Parameter').get('Value')
+                return param_value.get('Parameter').get('Value')
 
-              def set_ssm_parameter(ssm_client, ssm_parameter_name, value, Overwrite=True, Type="String"):
-                  response = ssm_client.put_parameter(
-                  Name=ssm_parameter_name,
-                  Value=value,
-                  Overwrite=True,
-                  Type="String"
-              )
+            def set_ssm_parameter(ssm_client, ssm_parameter_name, value, Overwrite=True, Type="String"):
+                response = ssm_client.put_parameter(
+                Name=ssm_parameter_name,
+                Value=value,
+                Overwrite=True,
+                Type="String"
+            )
 
-                  return response
+                return response
 
-              def send_sns_publish(subject, message):
-                  client = boto3.client('sns')
-                  TopicArn = [item["TopicArn"] for item in client.list_topics()['Topics'] if "NotifyCiscoAdminTopic" in item["TopicArn"]]
-                  logger.info("Sending SNS publish..")
-                  response = client.publish(
-                      Subject= subject,
-                      Message= message,
-                      TopicArn= TopicArn[0]
-                      )
+            def send_sns_publish(subject, message):
+                client = boto3.client('sns')
+                TopicArn = [item["TopicArn"] for item in client.list_topics()['Topics'] if "NotifyCiscoAdminTopic" in item["TopicArn"]]
+                logger.info("Sending SNS publish..")
+                response = client.publish(
+                    Subject= subject,
+                    Message= message,
+                    TopicArn= TopicArn[0]
+                    )
 
-              runtime_region = os.environ['AWS_REGION']
+            runtime_region = os.environ['AWS_REGION']
 
-              ssm_client = boto3.client('ssm',region_name=runtime_region)
-              try:
-                  logger.info("#Retriving SSM parameters...")
-                  PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
-                  SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
-                  SyncStatus = get_ssm_parameter(ssm_client,"SyncStatus")
-                  ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
-                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
-                  API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
-                  API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-                  retries = get_ssm_parameter(ssm_client,"Retries")
-                  maintenance = get_ssm_parameter(ssm_client,"Maintenance")
-                  logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
-                  logger.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
-                  logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
-                  logger.info("API_AUTH : {}".format(API_AUTH))
-                  logger.info("API_HEADER : {}".format(API_HEADER))
-                  logger.info("Retries : {}".format(retries))
-                  node_status = ["NotApplicable", "NotInSync", "NotUpgraded", "RegistrationFailed", "ReplicationStopped"]
-                  data = {}
+            ssm_client = boto3.client('ssm',region_name=runtime_region)
+            try:
+                logger.info("#Retriving SSM parameters...")
+                PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
+                SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
+                SyncStatus = get_ssm_parameter(ssm_client,"SyncStatus")
+                ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
+                ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
+                API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
+                API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+                retries = get_ssm_parameter(ssm_client,"Retries")
+                Maintenance = get_ssm_parameter(ssm_client,"Maintenance")
+                logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
+                logger.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
+                logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
+                logger.info("API_AUTH : {}".format(API_AUTH))
+                logger.info("API_HEADER : {}".format(API_HEADER))
+                logger.info("Retries : {}".format(retries))
+                node_status = ["NotApplicable", "NotInSync", "NotUpgraded", "RegistrationFailed", "ReplicationStopped"]
+                data = {}
+                if not bool(json.loads(Maintenance.lower())):
 
-                  if not bool(Maintenance):
+                    if SyncStatus == "SYNC_INPROGRESS":
+                        logger.info("Sync status is {}", SyncStatus)
+                        logger.info("Application still being deployed. Failover not required!")
+                        return "skip"
 
-                      if SyncStatus == "InProgress":
-                          logger.info("Sync status is {}", SyncStatus)
-                          logger.info("Application still being deployed. Failover not required!")
-                          return "skip"
+                    elif SyncStatus == "SYNC_COMPLETED":
 
-                      elif SyncStatus == "Connected":
-                          stepFunction = boto3.client('stepfunctions')
-                          response = stepFunction.start_execution(
-                                  stateMachineArn='arn:aws:states:us-east-1:730882916506:stateMachine:FailoverStateMachine-IUFsEDvr4Kc9'
-                              )
+                        stepFunction = boto3.client('stepfunctions')
+                        response = stepFunction.list_state_machines(
+                                maxResults=123
+                            )
+                        response = response['stateMachines']
+                        failover_state_machine_Arn = ""
+                        for item in response:
+                            logger.debug("Identifying Failover statemachine Arn")
+                            if "FailoverStateMachine" in item['stateMachineArn']:
+                                logger.debug("FailoverStateMachine Arn : {}".format(item['stateMachineArn']))
+                                failover_state_machine_Arn = item['stateMachineArn']
+                        logger.info("Triggering state machine with arn {}".format(failover_state_machine_Arn))
+                        response = stepFunction.start_execution(
+                                stateMachineArn=failover_state_machine_Arn
+                            )
 
-                      elif SyncStatus == "Disconnected:
-                          logger.info("Sync status is {}", SyncStatus)
-                          logger.info("One of the ISE nodes is down \n Need not execute Failover state machine.")
-                          # send_sns_publish(subject="Deployment health check notification: Failover not triggered", message = "One of the ISE nodes is down. Need not execute Failover state machine.")
-                          return "skip"
-
-                      elif SyncStatus in node_status:
-                          logger.info("Sync status is {}", SyncStatus)
-                          logger.info("One of the ISE nodes is not in sync. Manual sync required. \n Need not execute Failover state machine.")
-                          # send_sns_publish(subject="Deployment health check notification: Failover not triggered", message = "One of the ISE nodes is not in sync. Manual sync required. Need not execute Failover state machine.")
-                          return "skip"
-                      else:
-                          logger.info("Need not execute Failover state machine. Sync status is unknown.")
-                          return "skip"
+                    else:
+                        logger.info("Need not execute Failover state machine. Sync status is unknown.")
+                        return "skip"
 
 
-              except Exception as e:
-                logging.error('Exception: %s' % e, exc_info=True)
+            except Exception as e:
+              logging.error('Exception: %s' % e, exc_info=True)
+
 
       MemorySize: 3008
       VpcConfig:
@@ -2160,7 +2161,6 @@ Resources:
       SourceArn: !Sub ${LambdaSchedule.Arn}
     DependsOn:
       - LambdaSchedule
-
   LambdaSchedule:
     Type: "AWS::Events::Rule"
     Properties:
@@ -2217,6 +2217,7 @@ Resources:
       - arn:aws:iam::aws:policy/AmazonEC2FullAccess
       - arn:aws:iam::aws:policy/AmazonSSMFullAccess
       - arn:aws:iam::aws:policy/AmazonSNSFullAccess
+
       Path: "/"
       Policies:
       - PolicyName: root
@@ -2294,7 +2295,7 @@ Resources:
                   API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
                   API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
                   retries = get_ssm_parameter(ssm_client,"Retries")
-                  maintenance = get_ssm_parameter(ssm_client,"Maintenance")
+                  Maintenance = get_ssm_parameter(ssm_client,"Maintenance")
                   logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
                   logger.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
                   logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
@@ -2306,14 +2307,28 @@ Resources:
                   url = 'https://{}/api/v1/deployment/node'.format(PPAN_IP)
                   resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
                   logger.info("API response for checking node sync status and roles is: {} ".format(resp.text))
-                  if json_resp["response"][0]['nodeStatus'] == "Connected":
-                      set_ssm_parameter(ssm_client,"SyncStatus","SYNC_COMPLETED")
-                  else :
-                      set_ssm_parameter(ssm_client,"SyncStatus","SYNC_FAILED")
-                      send_sns_publish(subject="Deployment health check notification: Secondary Node is not in sync with Primary Node", message = "Secondary Node is not in sync with Primary Node.")
+                  json_resp = json.loads(resp.text)
+                  if not bool(json.loads(Maintenance.lower())):
+                      if json_resp["response"][0]['nodeStatus'] == "Connected" and json_resp["response"][1]['nodeStatus'] == "Connected":
+                          set_ssm_parameter(ssm_client,"SyncStatus","SYNC_COMPLETED")
+                      else :
+                          set_ssm_parameter(ssm_client,"SyncStatus","SYNC_FAILED")
+                          send_sns_publish(subject="Deployment health check notification: Secondary Node is not in sync with Primary Node", message = "Secondary Node is not in sync with Primary Node.")
+                  else:
+                      send_sns_publish(subject="Deployment is in Maintenance", message = "Deployment Healthcheck is not performed, Please ensure Maintenance parameter is set to False once the maintenance is completed.")
+
 
               except Exception as e:
                 logging.error('Exception: %s' % e, exc_info=True)
+
+
+      MemorySize: 3008
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref ISESecurityGroup
+        SubnetIds:
+          - !Ref PrivateSubnet1A
+          - !Ref PrivateSubnet1B
 
   FailoverStateMachine:
     Type: AWS::StepFunctions::StateMachine
