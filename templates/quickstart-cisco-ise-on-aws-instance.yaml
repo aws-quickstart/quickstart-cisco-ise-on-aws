@@ -997,39 +997,39 @@ Resources:
          Protocol: "email"
      TopicName: NotifyCiscoAdminTopic
 
-  #cloudwatch alarms
-  ISENode1AutorecoverAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmActions:
-        - !Sub arn:aws:automate:${AWS::Region}:ec2:recover
-      AlarmDescription: Recover instance if its status checks fail.
-      Namespace: AWS/EC2
-      MetricName: StatusCheckFailed_System
-      Dimensions:
-        - Name: InstanceId
-          Value: !Ref ISENode1
-      EvaluationPeriods: 2
-      Period: 60
-      Statistic: Minimum
-      ComparisonOperator: GreaterThanThreshold
-      Threshold: 0
-  ISENode2AutorecoverAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmActions:
-        - !Sub arn:aws:automate:${AWS::Region}:ec2:recover
-      AlarmDescription: Recover instance if its status checks fail.
-      Namespace: AWS/EC2
-      MetricName: StatusCheckFailed_System
-      Dimensions:
-        - Name: InstanceId
-          Value: !Ref ISENode2
-      EvaluationPeriods: 2
-      Period: 60
-      Statistic: Minimum
-      ComparisonOperator: GreaterThanThreshold
-      Threshold: 0
+  # #cloudwatch alarms
+  # ISENode1AutorecoverAlarm:
+  #   Type: AWS::CloudWatch::Alarm
+  #   Properties:
+  #     AlarmActions:
+  #       - !Sub arn:aws:automate:${AWS::Region}:ec2:recover
+  #     AlarmDescription: Recover instance if its status checks fail.
+  #     Namespace: AWS/EC2
+  #     MetricName: StatusCheckFailed_System
+  #     Dimensions:
+  #       - Name: InstanceId
+  #         Value: !Ref ISENode1
+  #     EvaluationPeriods: 2
+  #     Period: 60
+  #     Statistic: Minimum
+  #     ComparisonOperator: GreaterThanThreshold
+  #     Threshold: 0
+  # ISENode2AutorecoverAlarm:
+  #   Type: AWS::CloudWatch::Alarm
+  #   Properties:
+  #     AlarmActions:
+  #       - !Sub arn:aws:automate:${AWS::Region}:ec2:recover
+  #     AlarmDescription: Recover instance if its status checks fail.
+  #     Namespace: AWS/EC2
+  #     MetricName: StatusCheckFailed_System
+  #     Dimensions:
+  #       - Name: InstanceId
+  #         Value: !Ref ISENode2
+  #     EvaluationPeriods: 2
+  #     Period: 60
+  #     Statistic: Minimum
+  #     ComparisonOperator: GreaterThanThreshold
+  #     Threshold: 0
   # Set up ISE Deployment resources
   ISEDeployment:
     Type: Custom::ISEDeployment
@@ -1096,14 +1096,6 @@ Resources:
       Name: SyncStatus
       Type: String
       Value: PENDING
-
-  RetriesParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Description: Retries for Failover state machine
-      Name: Retries
-      Type: String
-      Value: 5
 
   MaintenanceParameter:
     Type: AWS::SSM::Parameter
@@ -1415,7 +1407,7 @@ Resources:
                   data = {}
                   nodes_to_check = [PPAN_IP, SPAN_IP]
                   nodes_list = [PPAN_IP, SPAN_IP]
-                  retries = int(get_ssm_parameter(ssm_client,"Retries"))
+                  retries = 5
                   if "taskresult" in event:
                       retries = int(event['taskresult']['retries'])
                   for ip in nodes_to_check:
@@ -1814,7 +1806,7 @@ Resources:
                   logger.info("API_HEADER : {}".format(API_HEADER))
 
                   data = {}
-                  retries = int(get_ssm_parameter(ssm_client,"Retries"))
+                  retries = 5
                   if "taskresult" in event:
                       retries = int(event['taskresult']['retries'])
 
@@ -2100,7 +2092,7 @@ Resources:
                 ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
                 API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
                 API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-                retries = get_ssm_parameter(ssm_client,"Retries")
+                retries = 5
                 Maintenance = get_ssm_parameter(ssm_client,"Maintenance")
                 logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
                 logger.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
@@ -2152,16 +2144,16 @@ Resources:
           - !Ref PrivateSubnet1A
           - !Ref PrivateSubnet1B
 
-  LambdaSchedulePermission:
+  FailoverLambdaSchedulePermission:
     Type: "AWS::Lambda::Permission"
     Properties:
       Action: 'lambda:InvokeFunction'
       FunctionName: !Sub ${TriggerFailoverLambda.Arn}
       Principal: 'events.amazonaws.com'
-      SourceArn: !Sub ${LambdaSchedule.Arn}
+      SourceArn: !Sub ${FailoverLambdaSchedule.Arn}
     DependsOn:
-      - LambdaSchedule
-  LambdaSchedule:
+      - FailoverLambdaSchedule
+  FailoverLambdaSchedule:
     Type: "AWS::Events::Rule"
     Properties:
       Description: >
@@ -2170,7 +2162,7 @@ Resources:
       State: ENABLED
       Targets:
         - Arn: !Sub ${TriggerFailoverLambda.Arn}
-          Id: LambdaSchedule
+          Id: FailoverLambdaSchedule
     DependsOn:
       - TriggerFailoverLambda
       - DeploymentStateMachine
@@ -2181,7 +2173,7 @@ Resources:
       Action: 'lambda:InvokeFunction'
       FunctionName: !Sub ${HealthCheckLambda.Arn}
       Principal: 'events.amazonaws.com'
-      SourceArn: !Sub ${LambdaSchedule.Arn}
+      SourceArn: !Sub ${HealthCheckLambdaSchedule.Arn}
     DependsOn:
       - HealthCheckLambdaSchedule
 
@@ -2294,7 +2286,7 @@ Resources:
                   ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
                   API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
                   API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-                  retries = get_ssm_parameter(ssm_client,"Retries")
+                  retries = 5
                   Maintenance = get_ssm_parameter(ssm_client,"Maintenance")
                   logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
                   logger.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
@@ -2557,7 +2549,7 @@ Resources:
                   ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
                   API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
                   API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-                  retries = get_ssm_parameter(ssm_client,"Retries")
+                  retries = 5
                   logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
                   logger.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
                   logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
@@ -2958,7 +2950,7 @@ Resources:
                   ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
                   API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
                   API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-                  retries = get_ssm_parameter(ssm_client,"Retries")
+                  retries = 5
                   logging.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
                   logging.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
                   logging.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
