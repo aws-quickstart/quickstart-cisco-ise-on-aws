@@ -2268,9 +2268,7 @@ Resources:
                   resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
                   logger.info("API response for checking node sync status and roles is: {} ".format(resp.text))
                   json_resp = json.loads(resp.text)
-                  if resp.status_code == 502:
-                      send_sns_publish(subject="PPAN is initializing", message = "PPAN is in initializing state. Please check back after some time. \n Probably a failover might have happened.")
-                  elif resp.status_code == 200:
+                  if resp.status_code == 200:
                       if not bool(json.loads(Maintenance.lower())):
                           if json_resp["response"][0]['nodeStatus'] == "Connected" and json_resp["response"][1]['nodeStatus'] == "Connected":
                               set_ssm_parameter(ssm_client,"SyncStatus","SYNC_COMPLETED")
@@ -2280,6 +2278,7 @@ Resources:
                       else:
                           send_sns_publish(subject="Deployment is in Maintenance", message = "Deployment Healthcheck is not performed, Please ensure Maintenance parameter is set to False once the maintenance is completed.")
                   else:
+                      set_ssm_parameter(ssm_client,"SyncStatus","SYNC_FAILED")
                       send_sns_publish(subject="Deployment is unstable", message = "Deployment is unstable. PPAN returned status_code {}.".format(str(resp.status_code)))
 
               except Exception as e:
