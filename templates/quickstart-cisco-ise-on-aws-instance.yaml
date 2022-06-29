@@ -997,39 +997,7 @@ Resources:
          Protocol: "email"
      TopicName: NotifyCiscoAdminTopic
 
-  # #cloudwatch alarms
-  # ISENode1AutorecoverAlarm:
-  #   Type: AWS::CloudWatch::Alarm
-  #   Properties:
-  #     AlarmActions:
-  #       - !Sub arn:aws:automate:${AWS::Region}:ec2:recover
-  #     AlarmDescription: Recover instance if its status checks fail.
-  #     Namespace: AWS/EC2
-  #     MetricName: StatusCheckFailed_System
-  #     Dimensions:
-  #       - Name: InstanceId
-  #         Value: !Ref ISENode1
-  #     EvaluationPeriods: 2
-  #     Period: 60
-  #     Statistic: Minimum
-  #     ComparisonOperator: GreaterThanThreshold
-  #     Threshold: 0
-  # ISENode2AutorecoverAlarm:
-  #   Type: AWS::CloudWatch::Alarm
-  #   Properties:
-  #     AlarmActions:
-  #       - !Sub arn:aws:automate:${AWS::Region}:ec2:recover
-  #     AlarmDescription: Recover instance if its status checks fail.
-  #     Namespace: AWS/EC2
-  #     MetricName: StatusCheckFailed_System
-  #     Dimensions:
-  #       - Name: InstanceId
-  #         Value: !Ref ISENode2
-  #     EvaluationPeriods: 2
-  #     Period: 60
-  #     Statistic: Minimum
-  #     ComparisonOperator: GreaterThanThreshold
-  #     Threshold: 0
+
   # Set up ISE Deployment resources
   ISEDeployment:
     Type: Custom::ISEDeployment
@@ -2300,18 +2268,23 @@ Resources:
                   resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
                   logger.info("API response for checking node sync status and roles is: {} ".format(resp.text))
                   json_resp = json.loads(resp.text)
-                  if not bool(json.loads(Maintenance.lower())):
-                      if json_resp["response"][0]['nodeStatus'] == "Connected" and json_resp["response"][1]['nodeStatus'] == "Connected":
-                          set_ssm_parameter(ssm_client,"SyncStatus","SYNC_COMPLETED")
-                      else :
-                          set_ssm_parameter(ssm_client,"SyncStatus","SYNC_FAILED")
-                          send_sns_publish(subject="Deployment health check notification: Secondary Node is not in sync with Primary Node", message = "Secondary Node is not in sync with Primary Node.")
+                  if resp.status_code == 502:
+                      send_sns_publish(subject="PPAN is initializing", message = "PPAN is in initializing state. Please check back after some time. \n Probably a failover might have happened.")
+                  elif resp.status_code == 200:
+                      if not bool(json.loads(Maintenance.lower())):
+                          if json_resp["response"][0]['nodeStatus'] == "Connected" and json_resp["response"][1]['nodeStatus'] == "Connected":
+                              set_ssm_parameter(ssm_client,"SyncStatus","SYNC_COMPLETED")
+                          else :
+                              set_ssm_parameter(ssm_client,"SyncStatus","SYNC_FAILED")
+                              send_sns_publish(subject="Deployment health check notification: Secondary Node is not in sync with Primary Node", message = "Secondary Node is not in sync with Primary Node.")
+                      else:
+                          send_sns_publish(subject="Deployment is in Maintenance", message = "Deployment Healthcheck is not performed, Please ensure Maintenance parameter is set to False once the maintenance is completed.")
                   else:
-                      send_sns_publish(subject="Deployment is in Maintenance", message = "Deployment Healthcheck is not performed, Please ensure Maintenance parameter is set to False once the maintenance is completed.")
-
+                      send_sns_publish(subject="Deployment is unstable", message = "Deployment is unstable. PPAN returned status_code {}.".format(str(resp.status_code)))
 
               except Exception as e:
                 logging.error('Exception: %s' % e, exc_info=True)
+
 
 
       MemorySize: 3008
@@ -2370,7 +2343,7 @@ Resources:
             },
             "Wait-Polling  for PPAN status": {
               "Type": "Wait",
-              "Seconds": 20,
+              "Seconds": 180,
               "Next": "Check PPAN Status"
             },
             "Check SPAN Gateway status": {
