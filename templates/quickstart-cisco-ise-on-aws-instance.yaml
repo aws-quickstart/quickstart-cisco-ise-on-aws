@@ -3029,12 +3029,12 @@ Outputs:
     Value: !Ref ISENode1
   ISENode1PrivateDnsName:
     Description: Private DNSName of the newly created ISE Node 1
-    Value: !GetAtt 
+    Value: !GetAtt
       - ISENode1
       - PrivateDnsName
   ISENode1PrivateIp:
     Description: Private IP address of the newly created ISE Node 1
-    Value: !GetAtt 
+    Value: !GetAtt
       - ISENode1
       - PrivateIp
   ISENode2ID:
@@ -3042,11 +3042,11 @@ Outputs:
     Value: !Ref ISENode2
   ISENode2PrivateDnsName:
     Description: Private DNSName of the newly created ISE Node 2
-    Value: !GetAtt 
+    Value: !GetAtt
       - ISENode2
       - PrivateDnsName
   ISENode2PrivateIp:
     Description: Private IP address of the newly created ISE Node 2
-    Value: !GetAtt 
+    Value: !GetAtt
       - ISENode2
       - PrivateIp

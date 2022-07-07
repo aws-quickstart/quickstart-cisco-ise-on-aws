@@ -12,7 +12,7 @@ Metadata:
           - Node2Hostname
           - KeyPairName
           - ManagementSubnet1Id
-          - ManagementSubnet2Id 
+          - ManagementSubnet2Id
           - TimeZone
           - ISEInstanceType
           - EBSEncrypt
