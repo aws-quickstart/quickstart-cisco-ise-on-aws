@@ -165,7 +165,7 @@ Resources:
       VersioningConfiguration:
         Status: Enabled
     Type: AWS::S3::Bucket
-  
+
   CleanUpS3Bucket:
     Properties:
       DestBucket:

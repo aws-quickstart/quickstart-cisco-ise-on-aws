@@ -1,7 +1,7 @@
 ---
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
-  Cisco Systems Identity Services Engine (New VPC). This template deploys Cisco ISE VMs 
+  Cisco Systems Identity Services Engine (New VPC). This template deploys Cisco ISE VMs
   into a new VPC with a Multi-AZ redundant configuration.
   See the Quick Start documentation for more details. **WARNING** You will
   be billed for the On-Demand instances and related AWS resources if you
@@ -52,7 +52,8 @@ Metadata:
         Parameters:
           - password
           - ConfirmPwd
-    ParameterLabels: 
+          - EmailSubscription
+    ParameterLabels:
       VPCCIDR:
         default: VPC CIDR
       #PublicSubnet1CIDR:
@@ -69,6 +70,8 @@ Metadata:
         default: Quick Start S3 bucket Region
       QSS3KeyPrefix:
         default: Quick Start S3 key prefix
+      EmailSubscription:
+        default: Email address
       ERSapi:
         default: ERS
       OpenAPI:
@@ -163,6 +166,9 @@ Parameters:
       - c5.9xlarge
       - t3.xlarge
     ConstraintDescription: Instance type should be one of the allowed values
+  EmailSubscription:
+    Description: 'Email list which will be notified about the Deployment health and Failover status'
+    Type: String
   EBSEncrypt:
     Description: Choose true to enable EBS encryption.
     Type: String
@@ -634,7 +640,6 @@ Parameters:
       the User Data section of the Instance settings window in the AWS Console.
     NoEcho: 'True'
     Type: String
-    Default: 'Test123'
     AllowedPattern: >-
       ^(?=.*?[A-Z])(?=.*?[a-z])(?i)(?!.*?admin|.*?cisco|.*?nimda|.*?ocsic)(?-i)(?=.*?[0-9]).{6,}$
     ConstraintDescription: >-
@@ -646,7 +651,6 @@ Parameters:
     Description: Retype Password
     NoEcho: 'True'
     Type: String
-    Default: 'Test123'
   StorageSize:
     Description: >-
       Specify the storage in GB (Minimum 300GB and Maximum 2400GB). 600GB is
@@ -663,13 +667,13 @@ Parameters:
       evaluation purpose only. On terminating the instance, volume will be
       deleted as well.
 Conditions:
-  UsingDefaultBucket: !Equals 
+  UsingDefaultBucket: !Equals
     - !Ref QSS3BucketName
     - aws-quickstart
 Rules:
   PasswdMismatch:
     Assertions:
-      - Assert: !Equals 
+      - Assert: !Equals
           - !Ref password
           - !Ref ConfirmPwd
         AssertDescription: Password mismatch
@@ -677,7 +681,7 @@ Resources:
   VPCStack:
     Type: 'AWS::CloudFormation::Stack'
     Properties:
-      TemplateURL: 
+      TemplateURL:
         !Sub
           - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-aws-vpc/templates/aws-vpc.template.yaml
           - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
@@ -693,9 +697,9 @@ Resources:
   WorkloadStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: 
+      TemplateURL:
         !Sub
-          - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/quickstart-cisco-ise-on-aws-workload.yaml
+          - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/quickstart-cisco-ise-on-aws-workload.template.yaml
           - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
             S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
@@ -722,6 +726,7 @@ Resources:
         PXGrid: !Ref PXGrid
         PXGridCloud: !Ref PXGridCloud
         password: !Ref password
+        EmailSubscription: !Ref EmailSubscription
         QSS3BucketName:
           Ref: QSS3BucketName
         QSS3BucketRegion: !Ref QSS3BucketRegion

@@ -12,7 +12,7 @@ Metadata:
           - Node2Hostname
           - KeyPairName
           - ManagementSubnet1Id
-          - ManagementSubnet2Id 
+          - ManagementSubnet2Id
           - TimeZone
           - ISEInstanceType
           - EBSEncrypt
@@ -33,6 +33,7 @@ Metadata:
           default: ISE User Details
         Parameters:
           - password
+          - EmailSubscription
       - Label:
           default: AWS Quick Start configuration
         Parameters:
@@ -54,6 +55,8 @@ Metadata:
         default: Time Zone
       ISEInstanceType:
         default: Instance Type
+      EmailSubscription:
+        default: Email address
       EBSEncrypt:
         default: EBS Encryption
       StorageSize:
@@ -98,6 +101,9 @@ Parameters:
       - c5.9xlarge
       - t3.xlarge
     ConstraintDescription: Instance type should be one of the allowed values
+  EmailSubscription:
+    Description: 'Email list which will be notified about the Deployment health and Failover status'
+    Type: String
   EBSEncrypt:
     Description: Choose true to enable EBS encryption.
     Type: String
@@ -589,7 +595,6 @@ Parameters:
       the User Data section of the Instance settings window in the AWS Console.
     NoEcho: 'True'
     Type: String
-    Default: 'Test123'
     AllowedPattern: >-
       ^(?=.*?[A-Z])(?=.*?[a-z])(?i)(?!.*?admin|.*?cisco|.*?nimda|.*?ocsic)(?-i)(?=.*?[0-9]).{6,}$
     ConstraintDescription: >-
@@ -679,7 +684,7 @@ Resources:
     Properties:
       TemplateURL:
         !Sub
-          - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/quickstart-cisco-ise-on-aws-instance.yaml
+          - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/quickstart-cisco-ise-on-aws-instance.template.yaml
           - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
             S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
@@ -698,6 +703,7 @@ Resources:
         PXGrid: !Ref PXGrid
         PXGridCloud: !Ref PXGridCloud
         password: !Ref password
+        EmailSubscription: !Ref EmailSubscription
         VPCID: !Ref VPCID
         VPCCIDR: !Ref VPCCIDR
         Node1Hostname: !Ref Node1Hostname
