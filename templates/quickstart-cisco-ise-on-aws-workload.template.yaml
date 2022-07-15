@@ -33,6 +33,7 @@ Metadata:
           default: ISE User Details
         Parameters:
           - password
+          - ConfirmPwd
           - EmailSubscription
       - Label:
           default: AWS Quick Start configuration
@@ -75,6 +76,8 @@ Metadata:
         default: pxGrid Cloud
       password:
         default: Enter Password
+      ConfirmPwd:
+        default: Re-Enter Password
       QSS3BucketName:
         default: Quick Start S3 bucket name
       QSS3BucketRegion:
@@ -115,7 +118,7 @@ Parameters:
   ERSapi:
     Description: Do you wish to enable ERS?
     Type: String
-    Default: 'no'
+    Default: 'yes'
     AllowedValues:
       - 'yes'
       - 'no'
@@ -123,7 +126,7 @@ Parameters:
   OpenAPI:
     Description: Do you wish to enable OpenAPI?
     Type: String
-    Default: 'no'
+    Default: 'yes'
     AllowedValues:
       - 'yes'
       - 'no'
@@ -602,6 +605,11 @@ Parameters:
       lowercase letter. Password should not be the same as username(admin).
       Should not contain the word cisco. Minimum password length should be 6
       character.
+  ConfirmPwd:
+    Description: Retype Password
+    NoEcho: 'True'
+    Type: String
+
   StorageSize:
     Description: >-
       Specify the storage in GB (Minimum 300GB and Maximum 2400GB). 600GB is
@@ -678,6 +686,13 @@ Mappings:
       BYOL: ami-0a56667a39f884c9e
     sa-east-1:
       BYOL: ami-0feeceb6d1a0dd691
+Rules:
+  PasswdMismatch:
+    Assertions:
+      - Assert: !Equals
+          - !Ref password
+          - !Ref ConfirmPwd
+        AssertDescription: Password mismatch
 Resources:
   ISEStack:
     Type: AWS::CloudFormation::Stack
@@ -703,6 +718,7 @@ Resources:
         PXGrid: !Ref PXGrid
         PXGridCloud: !Ref PXGridCloud
         password: !Ref password
+        ConfirmPwd: !Ref ConfirmPwd
         EmailSubscription: !Ref EmailSubscription
         VPCID: !Ref VPCID
         VPCCIDR: !Ref VPCCIDR

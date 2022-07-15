@@ -542,6 +542,13 @@ Parameters:
       lowercase letter. Password should not be the same as username(admin).
       Should not contain the word cisco. Minimum password length should be 6
       character.
+  ConfirmPwd:
+    Description: Retype Password
+    NoEcho: 'True'
+    Type: String
+    AllowedPattern: >-
+      ^(?=.*?[A-Z])(?=.*?[a-z])(?i)(?!.*?admin|.*?cisco|.*?nimda|.*?ocsic)(?-i)(?=.*?[0-9]).{6,}$
+
   StorageSize:
     Description: >-
       Specify the storage in GB (Minimum 300GB and Maximum 2400GB). 600GB is
@@ -986,14 +993,14 @@ Resources:
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
 
-  NotifyCiscoAdminTopic:
+  NotifyAdminTopic:
    Type: AWS::SNS::Topic
    Properties:
-     DisplayName: NotifyCiscoAdminTopic
+     DisplayName: NotifyAdminTopic
      Subscription:
        - Endpoint: !Ref EmailSubscription
          Protocol: "email"
-     TopicName: NotifyCiscoAdminTopic
+     TopicName: NotifyAdminTopic
 
 
   # Set up ISE Deployment resources
@@ -1046,8 +1053,31 @@ Resources:
               cfnresponse.send(event, context, status, responseData)
 
 
-
-
+  ISENode1IPParameter:
+     Type: AWS::SSM::Parameter
+     Properties:
+       Description: IP Address of Primary PAN
+       Name: PPAN_IP
+       Type: String
+       Value: !GetAtt
+       - ISENode1
+       - PrivateIp
+  ISENode2IPParameter:
+     Type: AWS::SSM::Parameter
+     Properties:
+       Description: IP Address of Secondary PAN
+       Name: SPAN_IP
+       Type: String
+       Value: !GetAtt
+       - ISENode2
+       - PrivateIp
+  ISENode1FqdnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Description: FQDN of Primary PAN
+      Name: Primary_FQDN
+      Type: String
+      Value: !Join [".",[!Ref Node1Hostname, !Ref DNSDomain]]
   ISENode2FqdnParameter:
     Type: AWS::SSM::Parameter
     Properties:
@@ -1055,6 +1085,20 @@ Resources:
       Name: Secondary_FQDN
       Type: String
       Value: !Join [".",[!Ref Node2Hostname, !Ref DNSDomain]]
+  AdminUsernameParameter:
+     Type: AWS::SSM::Parameter
+     Properties:
+       Description: Admin username of ISE
+       Name: ADMIN_USERNAME
+       Type: String
+       Value: admin
+  AdminPasswordParameter:
+     Type: AWS::SSM::Parameter
+     Properties:
+       Description: Admin password of ISE
+       Name: ADMIN_PASSWORD
+       Type: String
+       Value: !Ref password
   SyncStatusParameter:
     Type: AWS::SSM::Parameter
     Properties:
@@ -1062,7 +1106,6 @@ Resources:
       Name: SyncStatus
       Type: String
       Value: PENDING
-
   MaintenanceParameter:
     Type: AWS::SSM::Parameter
     Properties:
@@ -1343,16 +1386,22 @@ Resources:
               ssm_client = boto3.client('ssm',region_name=runtime_region)
               timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
               try:
-
-                  isenode01_ip = socket.gethostbyname_ex('iseserver1.example.com')[2][-1]
-                  isenode02_ip = socket.gethostbyname_ex('iseserver2.example.com')[2][-1]
-                  logger.info("Installed ISE Instance IPs are:\n PPAN - {} , SPAN - {}".format(isenode01_ip, isenode02_ip))
-
-                  logger.info("#Setting SSM parameters...")
-                  set_ssm_parameter(ssm_client,"PPAN_IP",isenode01_ip)
-                  set_ssm_parameter(ssm_client,"SPAN_IP",isenode02_ip)
-                  set_ssm_parameter(ssm_client,"ADMIN_USERNAME","admin")
-                  set_ssm_parameter(ssm_client,"ADMIN_PASSWORD","Test123",Type="SecureString")
+                  retries = 5 #Polling rate to restrict Step functions looping
+                  if "taskresult" in event:
+                      retries = int(event['taskresult']['retries'])
+                  else:
+                      PPAN_fqdn = get_ssm_parameter(ssm_client,"Primary_FQDN")
+                      SPAN_fqdn = get_ssm_parameter(ssm_client,"Secondary_FQDN")
+                      ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
+                      ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
+                      isenode01_ip = socket.gethostbyname_ex(PPAN_fqdn)[2][-1]
+                      isenode02_ip = socket.gethostbyname_ex(SPAN_fqdn)[2][-1]
+                      logger.info("Installed ISE Instance IPs are:\n PPAN - {} , SPAN - {}".format(isenode01_ip, isenode02_ip))
+                      logger.info("#Setting SSM parameters...")
+                      set_ssm_parameter(ssm_client,"PPAN_IP",isenode01_ip)
+                      set_ssm_parameter(ssm_client,"SPAN_IP",isenode02_ip)
+                      set_ssm_parameter(ssm_client,"ADMIN_USERNAME",ADMIN_USERNAME)
+                      set_ssm_parameter(ssm_client,"ADMIN_PASSWORD",ADMIN_PASSWORD,Type="SecureString")
 
 
                   logger.info("#Retriving SSM parameters...")
@@ -1373,9 +1422,7 @@ Resources:
                   data = {}
                   nodes_to_check = [PPAN_IP, SPAN_IP]
                   nodes_list = [PPAN_IP, SPAN_IP]
-                  retries = 5
-                  if "taskresult" in event:
-                      retries = int(event['taskresult']['retries'])
+
                   for ip in nodes_to_check:
                       url = 'https://{}/api/v1/deployment/node'.format(ip)
                       try:
@@ -1410,6 +1457,9 @@ Resources:
 
               except Exception as e:
                 logging.error('Exception: %s' % e, exc_info=True)
+
+
+
 
 
 
@@ -2038,7 +2088,7 @@ Resources:
 
             def send_sns_publish(subject, message):
                 client = boto3.client('sns')
-                TopicArn = [item["TopicArn"] for item in client.list_topics()['Topics'] if "NotifyCiscoAdminTopic" in item["TopicArn"]]
+                TopicArn = [item["TopicArn"] for item in client.list_topics()['Topics'] if "NotifyAdminTopic" in item["TopicArn"]]
                 logger.info("Sending SNS publish..")
                 response = client.publish(
                     Subject= subject,
@@ -2232,7 +2282,7 @@ Resources:
 
               def send_sns_publish(subject, message):
                   client = boto3.client('sns')
-                  TopicArn = [item["TopicArn"] for item in client.list_topics()['Topics'] if "NotifyCiscoAdminTopic" in item["TopicArn"]]
+                  TopicArn = [item["TopicArn"] for item in client.list_topics()['Topics'] if "NotifyAdminTopic" in item["TopicArn"]]
                   logger.info("Sending SNS publish..")
                   response = client.publish(
                       Subject= subject,
@@ -2388,7 +2438,7 @@ Resources:
               "Parameters": {
                 "Subject": "Update from Failover State machine",
                 "Message": "SPAN Gateway is disabled. \nCannot proceed with failover",
-                "TopicArn": "${NotifyCiscoAdminTopic}"
+                "TopicArn": "${NotifyAdminTopic}"
               },
               "Next": "SPAN Gateway is down!"
             },
@@ -2445,7 +2495,7 @@ Resources:
               "Parameters": {
                 "Subject": "Update from Failover State machine",
                 "Message": "Failover is not successful!",
-                "TopicArn": "${NotifyCiscoAdminTopic}"
+                "TopicArn": "${NotifyAdminTopic}"
               },
               "Next": "Failure is unsuccessful"
             },
@@ -2455,7 +2505,7 @@ Resources:
               "Parameters": {
                 "Subject": "Update from Failover State machine",
                 "Message": "Failover is successful!",
-                "TopicArn": "${NotifyCiscoAdminTopic}"
+                "TopicArn": "${NotifyAdminTopic}"
               },
               "Next": "Failover Successful"
             },

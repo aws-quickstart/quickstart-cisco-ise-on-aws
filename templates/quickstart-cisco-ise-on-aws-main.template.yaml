@@ -726,6 +726,7 @@ Resources:
         PXGrid: !Ref PXGrid
         PXGridCloud: !Ref PXGridCloud
         password: !Ref password
+        ConfirmPwd: !Ref ConfirmPwd
         EmailSubscription: !Ref EmailSubscription
         QSS3BucketName:
           Ref: QSS3BucketName
