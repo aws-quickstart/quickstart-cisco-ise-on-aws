@@ -1105,7 +1105,7 @@ Resources:
       Description: Sync status of deployment
       Name: SyncStatus
       Type: String
-      Value: PENDING
+      Value: INITIAL
   MaintenanceParameter:
     Type: AWS::SSM::Parameter
     Properties:
@@ -1192,7 +1192,7 @@ Resources:
             },
             "Wait for ISE to come up": {
               "Type": "Wait",
-              "Seconds": 180,
+              "Seconds": 10,
               "Next": "Check ISE status"
             },
             "Set Primary PAN": {
@@ -1214,7 +1214,7 @@ Resources:
               "Type": "Task",
               "Resource": "${RegisterSecondaryNodeLambda.Arn}",
               "InputPath": "$",
-              "Next": "Wait for Sync to complete",
+              "Next": "Check Sync status",
               "Catch": [
                 {
                   "ErrorEquals": [
@@ -1225,17 +1225,31 @@ Resources:
               ],
               "ResultPath": "$.taskresult"
             },
-            "Wait for Sync to complete": {
-              "Type": "Wait",
-              "Seconds": 240,
-              "Next": "Check Sync status"
-            },
             "Check Sync status": {
               "Type": "Task",
               "Resource": "${CheckSyncStatusLambda.Arn}",
               "InputPath": "$",
               "Next": "Is Sync complete?",
-              "ResultPath": "$.taskresult"
+              "ResultPath": "$.taskresult",
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "States.ALL"
+                  ],
+                  "BackoffRate": 1,
+                  "IntervalSeconds": 240,
+                  "MaxAttempts": 5
+                }
+              ],
+              "Catch": [
+                {
+                  "ErrorEquals": [
+                    "States.ALL"
+                  ],
+                  "Next": "Is Sync complete?",
+                  "ResultPath": "$.taskresult.SyncStatus"
+                }
+              ]
             },
             "Is Sync complete?": {
               "Type": "Choice",
@@ -1246,16 +1260,8 @@ Resources:
                   "Next": "Send Cfn Response"
                 },
                 {
-                  "And": [
-                    {
-                      "Variable": "$.taskresult.SyncStatus",
-                      "StringEquals": "SYNC_INPROGRESS"
-                    },
-                    {
-                      "Variable": "$.taskresult.retries",
-                      "StringEquals": "0"
-                    }
-                  ],
+                  "Variable": "$.taskresult.SyncStatus.Error",
+                  "StringEquals": "Exception",
                   "Next": "Secondary node Sync failed"
                 },
                 {
@@ -1264,23 +1270,13 @@ Resources:
                   "Next": "Secondary node Sync failed"
                 }
               ],
-              "Default": "Wait for Sync to complete",
+              "Default": "Check Sync status",
               "InputPath": "$"
             },
             "Send Cfn Response": {
               "Type": "Task",
               "Resource": "${CallbackLambda.Arn}",
               "InputPath": "$",
-              "Retry": [
-                {
-                  "ErrorEquals": [
-                    "States.ALL"
-                  ],
-                  "IntervalSeconds": 1,
-                  "MaxAttempts": 3,
-                  "BackoffRate": 2
-                }
-              ],
               "End": true,
               "Catch": [
                 {
@@ -1359,107 +1355,106 @@ Resources:
           logger.setLevel(logging.INFO)
 
           def get_ssm_parameter(ssm_client, ssm_parameter_name,WithDecryption=False):
-                  param_value = ssm_client.get_parameter(
-                  Name=ssm_parameter_name,
-                  WithDecryption=False
-              )
+                param_value = ssm_client.get_parameter(
+                Name=ssm_parameter_name,
+                WithDecryption=WithDecryption
+            )
 
-                  return param_value.get('Parameter').get('Value')
+                return param_value.get('Parameter').get('Value')
           def set_ssm_parameter(ssm_client, ssm_parameter_name, value, Overwrite=True, Type="String"):
-                  response = ssm_client.put_parameter(
-                  Name=ssm_parameter_name,
-                  Value=value,
-                  Overwrite=True,
-                  Type="String"
-              )
+                response = ssm_client.put_parameter(
+                Name=ssm_parameter_name,
+                Value=value,
+                Overwrite=True,
+                Type=Type
+            )
 
-                  return response
+                return response
 
           def timeout(event, context):
-                  logging.error('Execution is about to time out, sending failure response to CloudFormation')
-                  requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
-                  response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
-                  sys.exit(1)
+                logging.error('Execution is about to time out, sending failure response to CloudFormation')
+                requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
+                response = requests.put(event['ResourceProperties']['WaitHandle'], data=requests_data, headers={'Content-Type':''})
+                sys.exit(1)
 
           def handler(event, context):
-              runtime_region = os.environ['AWS_REGION']
-              ssm_client = boto3.client('ssm',region_name=runtime_region)
-              timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
-              try:
-                  retries = 5 #Polling rate to restrict Step functions looping
-                  if "taskresult" in event:
-                      retries = int(event['taskresult']['retries'])
-                  else:
-                      PPAN_fqdn = get_ssm_parameter(ssm_client,"Primary_FQDN")
-                      SPAN_fqdn = get_ssm_parameter(ssm_client,"Secondary_FQDN")
-                      ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
-                      ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
-                      isenode01_ip = socket.gethostbyname_ex(PPAN_fqdn)[2][-1]
-                      isenode02_ip = socket.gethostbyname_ex(SPAN_fqdn)[2][-1]
-                      logger.info("Installed ISE Instance IPs are:\n PPAN - {} , SPAN - {}".format(isenode01_ip, isenode02_ip))
-                      logger.info("#Setting SSM parameters...")
-                      set_ssm_parameter(ssm_client,"PPAN_IP",isenode01_ip)
-                      set_ssm_parameter(ssm_client,"SPAN_IP",isenode02_ip)
-                      set_ssm_parameter(ssm_client,"ADMIN_USERNAME",ADMIN_USERNAME)
-                      set_ssm_parameter(ssm_client,"ADMIN_PASSWORD",ADMIN_PASSWORD,Type="SecureString")
+            runtime_region = os.environ['AWS_REGION']
+            ssm_client = boto3.client('ssm',region_name=runtime_region)
+            timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
+            try:
+                retries = 5 #Polling rate to restrict Step functions looping
+                if "taskresult" in event:
+                    retries = int(event['taskresult']['retries'])
+                else:
+                    PPAN_fqdn = get_ssm_parameter(ssm_client,"Primary_FQDN")
+                    SPAN_fqdn = get_ssm_parameter(ssm_client,"Secondary_FQDN")
+                    ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
+                    ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
+                    logger.info("current admin password : {}".format(ADMIN_PASSWORD))
+                    isenode01_ip = socket.gethostbyname_ex(PPAN_fqdn)[2][-1]
+                    isenode02_ip = socket.gethostbyname_ex(SPAN_fqdn)[2][-1]
+                    logger.info("Installed ISE Instance IPs are:\n PPAN - {} , SPAN - {}".format(isenode01_ip, isenode02_ip))
+                    logger.info("#Setting SSM parameters...")
+                    set_ssm_parameter(ssm_client,"PPAN_IP",isenode01_ip)
+                    set_ssm_parameter(ssm_client,"SPAN_IP",isenode02_ip)
+                    set_ssm_parameter(ssm_client,"ADMIN_USERNAME",ADMIN_USERNAME)
+                    set_ssm_parameter(ssm_client,"ADMIN_PASSWORD",ADMIN_PASSWORD,Type="SecureString")
 
 
-                  logger.info("#Retriving SSM parameters...")
-                  PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
-                  SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
-                  ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
-                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD",WithDecryption=True)
-                  API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
-                  API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-                  Secondary_FQDN = get_ssm_parameter(ssm_client,"Secondary_FQDN")
+                logger.info("#Retriving SSM parameters...")
+                PPAN_IP = get_ssm_parameter(ssm_client,"PPAN_IP")
+                SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
+                ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
+                ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD",WithDecryption=True)
+                logger.info("current admin password : {}".format(ADMIN_PASSWORD))
+                API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
+                API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+                Secondary_FQDN = get_ssm_parameter(ssm_client,"Secondary_FQDN")
 
-                  logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
-                  logger.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
-                  logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
-                  logger.info("API_AUTH : {}".format(API_AUTH))
-                  logger.info("API_HEADER : {}".format(API_HEADER))
-                  logger.info("Secondary Polcy Administration node fqdn : {}".format(Secondary_FQDN))
-                  data = {}
-                  nodes_to_check = [PPAN_IP, SPAN_IP]
-                  nodes_list = [PPAN_IP, SPAN_IP]
+                logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
+                logger.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
+                logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
+                logger.info("API_AUTH : {}".format(API_AUTH))
+                logger.info("API_HEADER : {}".format(API_HEADER))
+                logger.info("Secondary Polcy Administration node fqdn : {}".format(Secondary_FQDN))
+                data = {}
+                nodes_to_check = [PPAN_IP, SPAN_IP]
+                nodes_list = [PPAN_IP, SPAN_IP]
 
-                  for ip in nodes_to_check:
-                      url = 'https://{}/api/v1/deployment/node'.format(ip)
-                      try:
-                          resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
-                          logger.info("API response for {} is {} ".format(ip, resp.text))
-                          if resp.status_code == 200:
-                              nodes_list.remove(ip)
-                              logger.info("ISE - {} is up and running".format(ip))
+                for ip in nodes_to_check:
+                    url = 'https://{}/api/v1/deployment/node'.format(ip)
+                    try:
+                        resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
+                        logger.info("API response for {} is {} ".format(ip, resp.text))
+                        if resp.status_code == 200:
+                            nodes_list.remove(ip)
+                            logger.info("ISE - {} is up and running".format(ip))
 
-                      except Exception as e:
-                          logging.error('Exception: %s' % e, exc_info=True)
-                          logger.error("Exception occured while executing get node details api for {}".format(ip))
-                          retries -= 1
-                          return {
-                                  "IseState": "pending",
-                                  "retries": str(retries)
-                                  }
+                    except Exception as e:
+                        logging.error('Exception: %s' % e, exc_info=True)
+                        logger.error("Exception occured while executing get node details api for {}".format(ip))
+                        retries -= 1
+                        return {
+                                "IseState": "pending",
+                                "retries": str(retries)
+                                }
 
-                  if nodes_list:
-                    timer.cancel()
-                    retries -= 1
-                    return {
-                              "IseState": "pending",
-                              "retries": str(retries)
-                            }
-                  else:
-                    timer.cancel()
-                    return {
-                              "IseState": "running",
-                              "retries": "0"
-                            }
+                if nodes_list:
+                  timer.cancel()
+                  retries -= 1
+                  return {
+                            "IseState": "pending",
+                            "retries": str(retries)
+                          }
+                else:
+                  timer.cancel()
+                  return {
+                            "IseState": "running",
+                            "retries": "0"
+                          }
 
-              except Exception as e:
-                logging.error('Exception: %s' % e, exc_info=True)
-
-
-
+            except Exception as e:
+              logging.error('Exception: %s' % e, exc_info=True)
 
 
 
@@ -1529,7 +1524,7 @@ Resources:
           def get_ssm_parameter(ssm_client, ssm_parameter_name,WithDecryption=False):
                   param_value = ssm_client.get_parameter(
                   Name=ssm_parameter_name,
-                  WithDecryption=False
+                  WithDecryption=WithDecryption
               )
 
                   return param_value.get('Parameter').get('Value')
@@ -1650,7 +1645,7 @@ Resources:
           def get_ssm_parameter(ssm_client, ssm_parameter_name,WithDecryption=False):
                   param_value = ssm_client.get_parameter(
                   Name=ssm_parameter_name,
-                  WithDecryption=False
+                  WithDecryption=WithDecryption
               )
 
                   return param_value.get('Parameter').get('Value')
@@ -1775,7 +1770,6 @@ Resources:
           import sys
           import os
 
-
           logging.basicConfig(stream = sys.stdout)
           logger = logging.getLogger()
           logger.setLevel(logging.INFO)
@@ -1783,7 +1777,7 @@ Resources:
           def get_ssm_parameter(ssm_client, ssm_parameter_name,WithDecryption=False):
                   param_value = ssm_client.get_parameter(
                   Name=ssm_parameter_name,
-                  WithDecryption=False
+                  WithDecryption=WithDecryption
               )
 
                   return param_value.get('Parameter').get('Value')
@@ -1793,7 +1787,7 @@ Resources:
                   Name=ssm_parameter_name,
                   Value=value,
                   Overwrite=True,
-                  Type="String"
+                  Type=Type
               )
 
                   return response
@@ -1822,10 +1816,6 @@ Resources:
                   logger.info("API_HEADER : {}".format(API_HEADER))
 
                   data = {}
-                  retries = 5
-                  if "taskresult" in event:
-                      retries = int(event['taskresult']['retries'])
-
                   url = 'https://{}/api/v1/deployment/node'.format(PPAN_IP)
                   try:
                       resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
@@ -1848,35 +1838,27 @@ Resources:
                           logger.info(response)
                           timer.cancel()
                           return {
-                                    "SyncStatus": "SYNC_FAILED",
-                                    "retries": "0"
+                                    "SyncStatus": "SYNC_FAILED"
                                   }
                         else:
                           timer.cancel()
-                          retries -= 1
-                          return {
-                                    "SyncStatus": "SYNC_INPROGRESS",
-                                    "retries": str(retries)
-                                  }
+                          raise Exception("Sync still in progress")
 
                   except Exception as e:
                       logging.error('Exception: %s' % e, exc_info=True)
                       logger.info("Exception occured while executing get node details api for {}".format(PPAN_IP))
                       timer.cancel()
-                      retries -= 1
-                      return {
-                                "SyncStatus": "SYNC_INPROGRESS",
-                                "retries": str(retries)
-                              }
+                      raise Exception("Sync still in progress")
 
               except Exception as e:
                 timer.cancel()
                 logging.error('Exception: %s' % e, exc_info=True)
-                retries -= 1
-                return {
-                          "SyncStatus": "SYNC_INPROGRESS",
-                          "retries": str(retries)
-                        }
+              #   retries -= 1
+              #   return {
+              #             "SyncStatus": "SYNC_INPROGRESS",
+              #             "retries": str(retries)
+              #           }
+                raise Exception("Sync still in progress")
 
       Handler: index.handler
       Role: !GetAtt CheckSyncStatusExecutionRole.Arn
@@ -1943,10 +1925,10 @@ Resources:
                   sys.exit(1)
 
 
-          def get_ssm_parameter(ssm_client, ssm_parameter_name):
+          def get_ssm_parameter(ssm_client, ssm_parameter_name, WithDecryption=False):
                   param_value = ssm_client.get_parameter(
                   Name=ssm_parameter_name,
-                  WithDecryption=False
+                  WithDecryption=WithDecryption
               )
                   return param_value.get('Parameter').get('Value')
 
@@ -2068,10 +2050,10 @@ Resources:
           logger.setLevel(logging.INFO)
 
           def handler(event, context):
-            def get_ssm_parameter(ssm_client, ssm_parameter_name):
+            def get_ssm_parameter(ssm_client, ssm_parameter_name, WithDecryption=False):
                 param_value = ssm_client.get_parameter(
                 Name=ssm_parameter_name,
-                WithDecryption=False
+                WithDecryption=WithDecryption
             )
 
                 return param_value.get('Parameter').get('Value')
@@ -2081,7 +2063,7 @@ Resources:
                 Name=ssm_parameter_name,
                 Value=value,
                 Overwrite=True,
-                Type="String"
+                Type=Type
             )
 
                 return response
@@ -2105,11 +2087,12 @@ Resources:
                 SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
                 SyncStatus = get_ssm_parameter(ssm_client,"SyncStatus")
                 ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
-                ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
+                ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD",WithDecryption=True)
                 API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
                 API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
                 retries = 5
                 Maintenance = get_ssm_parameter(ssm_client,"Maintenance")
+                SyncStatus_OldValue = get_ssm_parameter(ssm_client,"SyncStatus")
                 logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
                 logger.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
                 logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
@@ -2118,7 +2101,7 @@ Resources:
                 logger.info("Retries : {}".format(retries))
                 node_status = ["NotApplicable", "NotInSync", "NotUpgraded", "RegistrationFailed", "ReplicationStopped"]
                 data = {}
-                if not bool(json.loads(Maintenance.lower())):
+                if (not bool(json.loads(Maintenance.lower()))) or SyncStatus_OldValue == "INITIAL":
 
                     if SyncStatus == "SYNC_INPROGRESS":
                         logger.info("Sync status is {}", SyncStatus)
@@ -2262,10 +2245,10 @@ Resources:
           logger.setLevel(logging.INFO)
 
           def handler(event, context):
-              def get_ssm_parameter(ssm_client, ssm_parameter_name):
+              def get_ssm_parameter(ssm_client, ssm_parameter_name, WithDecryption=False):
                   param_value = ssm_client.get_parameter(
                   Name=ssm_parameter_name,
-                  WithDecryption=False
+                  WithDecryption=WithDecryption
               )
 
                   return param_value.get('Parameter').get('Value')
@@ -2275,7 +2258,7 @@ Resources:
                   Name=ssm_parameter_name,
                   Value=value,
                   Overwrite=True,
-                  Type="String"
+                  Type=Type
               )
 
                   return response
@@ -2299,11 +2282,12 @@ Resources:
                   SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
                   SyncStatus = get_ssm_parameter(ssm_client,"SyncStatus")
                   ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
-                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
+                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD",WithDecryption=True)
                   API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
                   API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
                   retries = 5
                   Maintenance = get_ssm_parameter(ssm_client,"Maintenance")
+                  SyncStatus_OldValue = get_ssm_parameter(ssm_client,"SyncStatus")
                   logger.info("Primmary Polcy Administration node ip : {}".format(PPAN_IP))
                   logger.info("Secondary Polcy Administration node ip : {}".format(SPAN_IP))
                   logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
@@ -2317,7 +2301,7 @@ Resources:
                   logger.info("API response for checking node sync status and roles is: {} ".format(resp.text))
                   json_resp = json.loads(resp.text)
                   if resp.status_code == 200:
-                      if not bool(json.loads(Maintenance.lower())):
+                      if (not bool(json.loads(Maintenance.lower()))) or SyncStatus_OldValue == "INITIAL":
                           if json_resp["response"][0]['nodeStatus'] == "Connected" and json_resp["response"][1]['nodeStatus'] == "Connected":
                               set_ssm_parameter(ssm_client,"SyncStatus","SYNC_COMPLETED")
                           else :
@@ -2331,6 +2315,8 @@ Resources:
 
               except Exception as e:
                 logging.error('Exception: %s' % e, exc_info=True)
+                send_sns_publish(subject="Deployment health check notification: PPAN node {} is down".format(PPAN_IP), message = "PPAN node {} is down. \n Please investigate.")
+
 
 
 
@@ -2361,7 +2347,28 @@ Resources:
               "Resource": "${CheckPPANStatusLambda.Arn}",
               "Next": "Choice-Trigger Failover?",
               "InputPath": "$",
-              "OutputPath": "$"
+              "OutputPath": "$",
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "States.ALL"
+                  ],
+                  "BackoffRate": 1,
+                  "IntervalSeconds": 60,
+                  "MaxAttempts": 5,
+                  "Comment": "Retry PPAN lambda status for 15mins (Every 3mins)"
+                }
+              ],
+              "TimeoutSeconds": 120,
+              "Catch": [
+                {
+                  "ErrorEquals": [
+                    "States.Timeout"
+                  ],
+                  "Next": "Choice-Trigger Failover?",
+                  "ResultPath": "$.PrimaryState"
+                }
+              ]
             },
             "Choice-Trigger Failover?": {
               "Type": "Choice",
@@ -2372,26 +2379,13 @@ Resources:
                   "Next": "PPAN is healthy. Failover not required!"
                 },
                 {
-                  "And": [
-                    {
-                      "Variable": "$.PrimaryState",
-                      "StringEquals": "failed"
-                    },
-                    {
-                      "Variable": "$.retries",
-                      "StringEquals": "0"
-                    }
-                  ],
+                  "Variable": "$.PrimaryState.Error",
+                  "StringEquals": "States.Timeout",
                   "Next": "Check SPAN Gateway status"
                 }
               ],
-              "Default": "Wait-Polling  for PPAN status",
+              "Default": "Check PPAN Status",
               "InputPath": "$"
-            },
-            "Wait-Polling  for PPAN status": {
-              "Type": "Wait",
-              "Seconds": 180,
-              "Next": "Check PPAN Status"
             },
             "Check SPAN Gateway status": {
               "Type": "Task",
@@ -2438,7 +2432,7 @@ Resources:
               "Parameters": {
                 "Subject": "Update from Failover State machine",
                 "Message": "SPAN Gateway is disabled. \nCannot proceed with failover",
-                "TopicArn": "${NotifyAdminTopic}"
+                "TopicArn": "arn:aws:sns:us-east-1:730882916506:NotifyAdminTopic"
               },
               "Next": "SPAN Gateway is down!"
             },
@@ -2505,7 +2499,7 @@ Resources:
               "Parameters": {
                 "Subject": "Update from Failover State machine",
                 "Message": "Failover is successful!",
-                "TopicArn": "${NotifyAdminTopic}"
+                "TopicArn": "arn:aws:sns:us-east-1:730882916506:NotifyAdminTopic"
               },
               "Next": "Failover Successful"
             },
@@ -2541,10 +2535,10 @@ Resources:
           logger.setLevel(logging.INFO)
 
           def handler(event, context):
-              def get_ssm_parameter(ssm_client, ssm_parameter_name):
+              def get_ssm_parameter(ssm_client, ssm_parameter_name, WithDecryption=False):
                   param_value = ssm_client.get_parameter(
                   Name=ssm_parameter_name,
-                  WithDecryption=False
+                  WithDecryption=WithDecryption
               )
 
                   return param_value.get('Parameter').get('Value')
@@ -2554,7 +2548,7 @@ Resources:
                   Name=ssm_parameter_name,
                   Value=value,
                   Overwrite=True,
-                  Type="String"
+                  Type=Type
               )
 
                   return response
@@ -2566,7 +2560,7 @@ Resources:
                   SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
                   SyncStatus = get_ssm_parameter(ssm_client,"SyncStatus")
                   ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
-                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
+                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD",WithDecryption=True)
                   API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
                   API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
                   retries = 5
@@ -2600,20 +2594,8 @@ Resources:
                   except Exception as e:
                       logger.error("Exception occured while executing get node details api for {}".format(PPAN_IP))
                       logger.info("Promoting SPAN - {} to PPAN".format(SPAN_IP))
-
-                      if "retries" in event:
-                          retries = int(event['retries']) - 1
-                          return {
-                              "PrimaryState": "failed",
-                              "retries": str(retries)
-                              }
-                      else:
-                          return {
-                              "PrimaryState": "failed",
-                              "retries": str(retries)
-                              }
                       logging.error('Exception: %s' % e, exc_info=True)
-
+                      raise Exception('Failed to get successful response from PPAN')
 
               except Exception as e:
                 logging.error('Exception: %s' % e, exc_info=True)
@@ -2680,7 +2662,7 @@ Resources:
           def get_ssm_parameter(ssm_client, ssm_parameter_name,WithDecryption=False):
                   param_value = ssm_client.get_parameter(
                   Name=ssm_parameter_name,
-                  WithDecryption=False
+                  WithDecryption=WithDecryption
               )
 
                   return param_value.get('Parameter').get('Value')
@@ -2690,7 +2672,7 @@ Resources:
                   Name=ssm_parameter_name,
                   Value=value,
                   Overwrite=True,
-                  Type="String"
+                  Type=Type
               )
 
                   return response
@@ -2711,7 +2693,7 @@ Resources:
                   SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
                   SyncStatus = get_ssm_parameter(ssm_client,"SyncStatus")
                   ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
-                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
+                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD",WithDecryption=True)
                   API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
                   API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
 
@@ -2811,7 +2793,7 @@ Resources:
           def get_ssm_parameter(ssm_client, ssm_parameter_name,WithDecryption=False):
                   param_value = ssm_client.get_parameter(
                   Name=ssm_parameter_name,
-                  WithDecryption=False
+                  WithDecryption=WithDecryption
               )
 
                   return param_value.get('Parameter').get('Value')
@@ -2821,7 +2803,7 @@ Resources:
                   Name=ssm_parameter_name,
                   Value=value,
                   Overwrite=True,
-                  Type="String"
+                  Type=Type
               )
 
                   return response
@@ -2842,7 +2824,7 @@ Resources:
                   SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
                   SyncStatus = get_ssm_parameter(ssm_client,"SyncStatus")
                   ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
-                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
+                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD",WithDecryption=True)
                   API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
                   API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
 
@@ -2936,7 +2918,7 @@ Resources:
           def get_ssm_parameter(ssm_client, ssm_parameter_name,WithDecryption=False):
                   param_value = ssm_client.get_parameter(
                   Name=ssm_parameter_name,
-                  WithDecryption=False
+                  WithDecryption=WithDecryption
               )
 
                   return param_value.get('Parameter').get('Value')
@@ -2946,7 +2928,7 @@ Resources:
                   Name=ssm_parameter_name,
                   Value=value,
                   Overwrite=True,
-                  Type="String"
+                  Type=Type
               )
 
                   return response
@@ -2967,7 +2949,7 @@ Resources:
                   SPAN_IP = get_ssm_parameter(ssm_client,"SPAN_IP")
                   SyncStatus = get_ssm_parameter(ssm_client,"SyncStatus")
                   ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
-                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD")
+                  ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD",WithDecryption=True)
                   API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
                   API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
                   retries = 5

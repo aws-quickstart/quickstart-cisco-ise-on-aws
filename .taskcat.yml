@@ -5,9 +5,9 @@ project:
   shorten_stack_name: true
   #s3_bucket: tcat-quickstart-cisco-ise-on-aws-zwcdqyke
   s3_regional_buckets: true
-  package_lambda: false
-  lambda_source_path: functions/source
-  lambda_zip_path: functions/packages
+  # package_lambda: false
+  # lambda_source_path: functions/source
+  # lambda_zip_path: functions/packages
   parameters:
     QSS3BucketName: $[taskcat_autobucket]
     QSS3KeyPrefix: "quickstart-cisco-ise-on-aws/"
@@ -16,7 +16,7 @@ project:
     AvailabilityZones: $[taskcat_getaz_2]
     password: $[taskcat_genpass_10A]
     ConfirmPwd: $[taskcat_getval_password]
-    EmailSubscription: test@example.com
+    EmailSubscription: vesivaku@cisco.com
 tests:
   ise-quickstart:
     template: templates/quickstart-cisco-ise-on-aws-main.template.yaml
