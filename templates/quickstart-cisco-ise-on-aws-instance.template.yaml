@@ -1192,7 +1192,7 @@ Resources:
             },
             "Wait for ISE to come up": {
               "Type": "Wait",
-              "Seconds": 10,
+              "Seconds": 180,
               "Next": "Check ISE status"
             },
             "Set Primary PAN": {
@@ -2432,7 +2432,7 @@ Resources:
               "Parameters": {
                 "Subject": "Update from Failover State machine",
                 "Message": "SPAN Gateway is disabled. \nCannot proceed with failover",
-                "TopicArn": "arn:aws:sns:us-east-1:730882916506:NotifyAdminTopic"
+                "TopicArn": "${NotifyAdminTopic}"
               },
               "Next": "SPAN Gateway is down!"
             },
@@ -2499,7 +2499,7 @@ Resources:
               "Parameters": {
                 "Subject": "Update from Failover State machine",
                 "Message": "Failover is successful!",
-                "TopicArn": "arn:aws:sns:us-east-1:730882916506:NotifyAdminTopic"
+                "TopicArn": "${NotifyAdminTopic}"
               },
               "Next": "Failover Successful"
             },
