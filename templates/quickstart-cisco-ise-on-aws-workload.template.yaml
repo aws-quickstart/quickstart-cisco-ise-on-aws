@@ -3,6 +3,28 @@ Description: >-
   AWS Cloud Formation Template for Cisco Identity Service Engine. CFT Version :
   4.0 (qs-1sp7ritjt)
 Metadata:
+  LintSpellExclude:
+    - openapi
+    - pxGrid
+    - Cisco
+    - compute-1
+    - com
+    - pem
+    - amazonaws
+    - myhostname
+    - mykeypair
+    - hostname
+    - failover
+    - console
+    - plaintext
+    - Management
+    - Cloud
+
+  cfn-lint:
+    config:
+      ignore_checks:
+        - W9001 # Changing parameter name requires a code change.
+
   'AWS::CloudFormation::Interface':
     ParameterGroups:
       - Label:
@@ -22,6 +44,9 @@ Metadata:
         Parameters:
           - VPCID
           - DNSDomain
+          - VPCCIDR
+          - PrivateSubnet1CIDR
+          - PrivateSubnet2CIDR
       - Label:
           default: ISE Services
         Parameters:
@@ -62,6 +87,12 @@ Metadata:
         default: EBS Encryption
       StorageSize:
         default: Volume Size
+      PrivateSubnet1CIDR:
+        default: Private subnet 1 CIDR
+      PrivateSubnet2CIDR:
+        default: Private subnet 2 CIDR
+      VPCCIDR:
+        default: VPC CIDR
       VPCID:
         default: VPC ID
       DNSDomain:
@@ -652,40 +683,6 @@ Parameters:
     Type: String
 Conditions:
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
-Mappings:
-  CiscoISE31AMI:
-    us-east-1:
-      BYOL: ami-0bb0a9d243824a077
-    us-east-2:
-      BYOL: ami-0262130ee7b27f122
-    us-west-1:
-      BYOL: ami-0965fef2e601ad4d0
-    us-west-2:
-      BYOL: ami-0ffd69a117dbcbb9e
-    ca-central-1:
-      BYOL: ami-0715d661908b3c937
-    eu-central-1:
-      BYOL: ami-0526fe132f57b4dd5
-    eu-west-1:
-      BYOL: ami-0c0078c6bc939b794
-    eu-west-2:
-      BYOL: ami-0a0e17dd5fa1643e9
-    eu-west-3:
-      BYOL: ami-0f766d122c0b5c7b1
-    eu-north-1:
-      BYOL: ami-06d5092c5d2de909d
-    ap-southeast-1:
-      BYOL: ami-0214a475ff692424f
-    ap-southeast-2:
-      BYOL: ami-0f1846c9d911d1727
-    ap-south-1:
-      BYOL: ami-0add11be4e3a2b72e
-    ap-northeast-1:
-      BYOL: ami-0da69493a00c3ebb1
-    ap-northeast-2:
-      BYOL: ami-0a56667a39f884c9e
-    sa-east-1:
-      BYOL: ami-0feeceb6d1a0dd691
 Rules:
   PasswdMismatch:
     Assertions:
@@ -718,15 +715,11 @@ Resources:
         PXGrid: !Ref PXGrid
         PXGridCloud: !Ref PXGridCloud
         password: !Ref password
-        ConfirmPwd: !Ref ConfirmPwd
         EmailSubscription: !Ref EmailSubscription
         VPCID: !Ref VPCID
         VPCCIDR: !Ref VPCCIDR
         Node1Hostname: !Ref Node1Hostname
         Node2Hostname: !Ref Node2Hostname
-        QSS3BucketName: !Ref QSS3BucketName
-        QSS3KeyPrefix: !Ref QSS3KeyPrefix
-        QSS3BucketRegion: !Ref QSS3BucketRegion
 
 Outputs:
   VPCID:
