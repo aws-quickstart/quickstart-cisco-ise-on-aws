@@ -1,0 +1,22 @@
+project:
+  name: quickstart-cisco-ise-on-aws
+  regions:
+    - us-east-1
+  shorten_stack_name: true
+  s3_bucket: ''
+  s3_regional_buckets: true
+  package_lambda: false
+  parameters:
+    QSS3BucketName: $[taskcat_autobucket]
+    QSS3KeyPrefix: "quickstart-cisco-ise-on-aws/"
+    QSS3BucketRegion: $[taskcat_current_region]
+    KeyPairName:  $[taskcat_getkeypair]
+    AvailabilityZones: $[taskcat_getaz_2]
+    password: $[taskcat_genpass_10A]
+    ConfirmPwd: $[taskcat_getval_password]
+    EmailSubscription: example@example.com
+tests:
+  ise-quickstart:
+    template: templates/quickstart-cisco-ise-on-aws-main.template.yaml
+    regions:
+      - us-east-1
