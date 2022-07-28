@@ -1,6 +1,32 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
   This template  deploys a cisco ise appliance in a VPC (qs-1sp7rithq)
+Metadata:
+  LintSpellExclude:
+    - openapi
+    - pxGrid
+    - Cisco
+    - compute-1
+    - com
+    - pem
+    - amazonaws
+    - myhostname
+    - mykeypair
+    - hostname
+    - failover
+    - console
+    - plaintext
+    - Management
+    - Cloud
+
+  cfn-lint:
+    config:
+      ignore_checks:
+        - W9001 # Changing parameter name requires a code change.
+        - W9002
+        - W9003
+        - W1020
+
 Parameters:
   KeyPairName:
     Description: >-
@@ -542,13 +568,6 @@ Parameters:
       lowercase letter. Password should not be the same as username(admin).
       Should not contain the word cisco. Minimum password length should be 6
       character.
-  ConfirmPwd:
-    Description: Retype Password
-    NoEcho: 'True'
-    Type: String
-    AllowedPattern: >-
-      ^(?=.*?[A-Z])(?=.*?[a-z])(?i)(?!.*?admin|.*?cisco|.*?nimda|.*?ocsic)(?-i)(?=.*?[0-9]).{6,}$
-
   StorageSize:
     Description: >-
       Specify the storage in GB (Minimum 300GB and Maximum 2400GB). 600GB is
@@ -573,28 +592,10 @@ Parameters:
     Default: 10.0.0.0/16
     Description: CIDR block for the VPC.
     Type: String
-  QSS3BucketName:
-    AllowedPattern: "^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$"
-    ConstraintDescription: "Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-)."
-    Default: aws-quickstart
-    Description: "S3 bucket name for the Quick Start assets. Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-)."
-    Type: String
-  QSS3BucketRegion:
-    Default: us-east-1
-    Description: 'The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value.'
-    Type: String
-  QSS3KeyPrefix:
-    AllowedPattern: "^[0-9a-zA-Z-/]*$"
-    ConstraintDescription: "Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/)."
-    Default: quickstart-cisco-ise-on-aws/
-    Description: "S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/)."
-    Type: String
   EmailSubscription:
     Description: 'Email list which will be notified about the Deployment health and Failover status'
     Type: String
 
-Conditions:
-  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
 Mappings:
   CiscoISE31AMI:
     us-east-1:
@@ -980,19 +981,6 @@ Resources:
       LoadBalancerArn: !Ref PSNNLB
       Port: 49
       Protocol: TCP
-  #lambda boilerplate
-  CopyLambdaStack:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL:
-        !Sub
-          - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/copy-lambdas.template.yaml
-          - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
-            S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
-      Parameters:
-        QSS3BucketName: !Ref QSS3BucketName
-        QSS3KeyPrefix: !Ref QSS3KeyPrefix
-
   NotifyAdminTopic:
    Type: AWS::SNS::Topic
    Properties:
@@ -1115,6 +1103,13 @@ Resources:
       Value: False
 
   DeploymentStateMachineLambdaRole:
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks:
+            - EIAMPolicyWildcardResource
+          ignore_reasons:
+            - EIAMPolicyWildcardResource: "Wildcard resource allowed by design"
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -1127,7 +1122,7 @@ Resources:
           Action:
           - sts:AssumeRole
       ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Path: "/"
       Policies:
       - PolicyName: root
@@ -1311,6 +1306,13 @@ Resources:
             Action:
               - "sts:AssumeRole"
   StatesExecutionPolicy:
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks:
+            - EIAMPolicyWildcardResource
+          ignore_reasons:
+            - EIAMPolicyWildcardResource: "Wildcard resource allowed by design"
     Type: AWS::IAM::Policy
     Properties:
       PolicyName: StatesExecutionPolicy
@@ -1480,10 +1482,10 @@ Resources:
           Action:
           - sts:AssumeRole
       ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-      - arn:aws:iam::aws:policy/AmazonEC2FullAccess
-      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonEC2FullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMFullAccess
       Path: "/"
       Policies:
       - PolicyName: root
@@ -1601,10 +1603,10 @@ Resources:
           Action:
           - sts:AssumeRole
       ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-      - arn:aws:iam::aws:policy/AmazonEC2FullAccess
-      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonEC2FullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMFullAccess
       Path: "/"
       Policies:
       - PolicyName: root
@@ -1738,10 +1740,10 @@ Resources:
           Action:
           - sts:AssumeRole
       ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-      - arn:aws:iam::aws:policy/AmazonEC2FullAccess
-      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonEC2FullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMFullAccess
       Path: "/"
       Policies:
       - PolicyName: root
@@ -1882,10 +1884,10 @@ Resources:
           Action:
           - sts:AssumeRole
       ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-      - arn:aws:iam::aws:policy/AmazonEC2FullAccess
-      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonEC2FullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMFullAccess
       Path: "/"
       Policies:
       - PolicyName: root
@@ -1977,10 +1979,10 @@ Resources:
           Action:
           - sts:AssumeRole
       ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-      - arn:aws:iam::aws:policy/AmazonEC2FullAccess
-      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonEC2FullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMFullAccess
       Path: "/"
       Policies:
       - PolicyName: root
@@ -2008,12 +2010,12 @@ Resources:
           Action:
           - sts:AssumeRole
       ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-      - arn:aws:iam::aws:policy/AmazonEC2FullAccess
-      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
-      - arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess
-      - arn:aws:iam::aws:policy/AmazonSNSFullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonEC2FullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMFullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AWSStepFunctionsFullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSNSFullAccess
       Path: "/"
       Policies:
       - PolicyName: root
@@ -2203,11 +2205,11 @@ Resources:
           Action:
           - sts:AssumeRole
       ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-      - arn:aws:iam::aws:policy/AmazonEC2FullAccess
-      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
-      - arn:aws:iam::aws:policy/AmazonSNSFullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonEC2FullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMFullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSNSFullAccess
 
       Path: "/"
       Policies:
@@ -2624,10 +2626,10 @@ Resources:
           Action:
           - sts:AssumeRole
       ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-      - arn:aws:iam::aws:policy/AmazonEC2FullAccess
-      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonEC2FullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMFullAccess
       Path: "/"
       Policies:
       - PolicyName: root
@@ -2755,10 +2757,10 @@ Resources:
           Action:
           - sts:AssumeRole
       ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-      - arn:aws:iam::aws:policy/AmazonEC2FullAccess
-      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonEC2FullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMFullAccess
       Path: "/"
       Policies:
       - PolicyName: root
@@ -2880,10 +2882,10 @@ Resources:
           Action:
           - sts:AssumeRole
       ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-      - arn:aws:iam::aws:policy/AmazonEC2FullAccess
-      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonEC2FullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMFullAccess
       Path: "/"
       Policies:
       - PolicyName: root
@@ -3036,10 +3038,10 @@ Resources:
           Action:
           - sts:AssumeRole
       ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
-      - arn:aws:iam::aws:policy/AmazonEC2FullAccess
-      - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonEC2FullAccess
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMFullAccess
       Path: "/"
       Policies:
       - PolicyName: root

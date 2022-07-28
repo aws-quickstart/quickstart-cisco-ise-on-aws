@@ -7,6 +7,27 @@ Description: >-
   be billed for the On-Demand instances and related AWS resources if you
   create a stack from this template (qs-1sp7ritjm).
 Metadata:
+  LintSpellExclude:
+    - openapi
+    - pxGrid
+    - Cisco
+    - compute-1
+    - com
+    - pem
+    - amazonaws
+    - myhostname
+    - mykeypair
+    - hostname
+    - failover
+    - console
+    - plaintext
+    - Management
+    - Cloud
+
+  cfn-lint:
+    config:
+      ignore_checks:
+        - W9001 # Changing parameter name requires a code change.
   QuickStartDocumentation:
     EntrypointName: "Launch into a new VPC"
 
@@ -27,7 +48,7 @@ Metadata:
           - QSS3BucketRegion
           - QSS3KeyPrefix
       - Label:
-          default: ISE Small Deployment Instance Details
+          default: ISE small deployment instance details
         Parameters:
           - Node1Hostname
           - Node2Hostname
@@ -37,18 +58,18 @@ Metadata:
           - EBSEncrypt
           - StorageSize
       - Label:
-          default: ISE Network Configuration
+          default: ISE network configuration
         Parameters:
           - DNSDomain
       - Label:
-          default: ISE Services
+          default: ISE services
         Parameters:
           - ERSapi
           - OpenAPI
           - PXGrid
           - PXGridCloud
       - Label:
-          default: User Details
+          default: User details
         Parameters:
           - password
           - ConfirmPwd
@@ -85,21 +106,21 @@ Metadata:
       Node2Hostname:
         default: Host name node 2
       DNSDomain:
-        default: DNS Domain
+        default: DNS domain
       password:
-        default: Enter Password
+        default: Enter password
       ConfirmPwd:
-        default: Confirm Password
+        default: Confirm password
       KeyPairName:
-        default: Instance Key Pair
+        default: Instance key pair
       TimeZone:
-        default: Time Zone
+        default: Time zone
       ISEInstanceType:
-        default: Instance Type
+        default: Instance type
       StorageSize:
-        default: Volume Size
+        default: Volume size
       EBSEncrypt:
-        default: EBS Encryption
+        default: EBS encryption
 Parameters:
   PrivateSubnet1CIDR:
     AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
@@ -152,7 +173,7 @@ Parameters:
       To access the Cisco ISE instance via SSH, choose the PEM file that you
       created in AWS for the username "admin". Create a PEM key pair in AWS now
       if you have not configured one already. Usage example:  ssh -i
-      mykeypair.pem admin@myhostname.compute-1.amazonaws.com
+      mykeypair.pem admin@myhostname.compute-1.amazonaws.com.
     Type: 'AWS::EC2::KeyPair::KeyName'
     AllowedPattern: .+
     ConstraintDescription: Instance Key Pair cannot be empty
@@ -167,7 +188,7 @@ Parameters:
       - t3.xlarge
     ConstraintDescription: Instance type should be one of the allowed values
   EmailSubscription:
-    Description: 'Email list which will be notified about the Deployment health and Failover status'
+    Description: 'Email list which will be notified about the deployment health and failover status.'
     Type: String
   EBSEncrypt:
     Description: Choose true to enable EBS encryption.
@@ -178,7 +199,7 @@ Parameters:
       - 'true'
     ConstraintDescription: It can either be true or false
   ERSapi:
-    Description: Do you wish to enable ERS?
+    Description: Choose yes to enable ERS.
     Type: String
     Default: 'yes'
     AllowedValues:
@@ -186,7 +207,7 @@ Parameters:
       - 'no'
     ConstraintDescription: It can either be yes or no
   OpenAPI:
-    Description: Do you wish to enable OpenAPI?
+    Description: Choose yes to enable OpenAPI.
     Type: String
     Default: 'yes'
     AllowedValues:
@@ -194,7 +215,7 @@ Parameters:
       - 'no'
     ConstraintDescription: It can either be yes or no
   PXGrid:
-    Description: Do you wish to enable pxGrid?
+    Description: Chose yes to enable pxGrid.
     Type: String
     Default: 'yes'
     AllowedValues:
@@ -202,7 +223,7 @@ Parameters:
       - 'no'
     ConstraintDescription: It can either be yes or no
   PXGridCloud:
-    Description: Do you wish to enable pxGrid Cloud?
+    Description: Choose yes to enable pxGrid Cloud.
     Type: String
     Default: 'yes'
     AllowedValues:
@@ -636,8 +657,8 @@ Parameters:
     Description: >-
       Enter a password for the username "admin". The password must be aligned
       with the Cisco ISE password policy (must contain one or more lowercase, uppercase, numeric, and non-alphanumeric characters). The configured password is used for
-      Cisco ISE GUI access. Warning: The password is displayed in plaintext in
-      the User Data section of the Instance settings window in the AWS Console.
+      Cisco ISE GUI access. Warning: the password is displayed in plaintext in
+      the user data section of the instance settings window in the AWS Management Console.
     NoEcho: 'True'
     Type: String
     AllowedPattern: >-
@@ -648,12 +669,12 @@ Parameters:
       Should not contain the word cisco. Minimum password length should be 6
       character.
   ConfirmPwd:
-    Description: Retype Password
+    Description: Confirm password entered in the password field.
     NoEcho: 'True'
     Type: String
   StorageSize:
     Description: >-
-      Specify the storage in GB (Minimum 300GB and Maximum 2400GB). 600GB is
+      Specify the storage in GB (minimum 300GB and maximum 2400GB). 600GB is
       recommended for production use, storage lesser than 600GB can be used for
       evaluation purpose only. On terminating the instance, volume will be
       deleted as well.
