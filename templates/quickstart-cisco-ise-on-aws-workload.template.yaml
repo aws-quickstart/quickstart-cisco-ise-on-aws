@@ -645,7 +645,34 @@ Parameters:
     Description: Retype Password
     NoEcho: 'True'
     Type: String
-
+  FailoverPollingRate:
+    Description:
+      The rate (frequency) that determines when CloudWatch Events runs the rule that
+      triggers the Route Monitor Lambda function.
+    Default: rate(60 minutes)
+    AllowedValues:
+      - rate(1 minute)
+      - rate(10 minutes)
+      - rate(60 minutes)
+    Type: String
+  HealthcheckPollingRate:
+    Description:
+      The rate (frequency) that determines when CloudWatch Events runs the rule that
+      triggers the Route Monitor Lambda function.
+    Default: rate(10 minutes)
+    AllowedValues:
+      - rate(1 minute)
+      - rate(10 minutes)
+      - rate(60 minutes)
+    Type: String
+  AutoFailover:
+    Description: Do you wish to enable auto-failover mechanism?
+    Type: String
+    Default: 'False'
+    AllowedValues:
+      - 'True'
+      - 'False'
+    ConstraintDescription: It can either be True or False
   StorageSize:
     Description: >-
       Specify the storage in GB (Minimum 300GB and Maximum 2400GB). 600GB is
@@ -734,6 +761,9 @@ Resources:
         password: !Ref password
         LBPrivateAddressSubnet1: !Ref LBPrivateAddressSubnet1
         LBPrivateAddressSubnet2: !Ref LBPrivateAddressSubnet2
+        AutoFailover: !Ref AutoFailover
+        FailoverPollingRate: !Ref FailoverPollingRate
+        HealthcheckPollingRate: !Ref HealthcheckPollingRate
         EmailSubscription: !Ref EmailSubscription
         VPCID: !Ref VPCID
         VPCCIDR: !Ref VPCCIDR

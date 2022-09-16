@@ -94,7 +94,7 @@ Parameters:
     AllowedValues:
       - 'True'
       - 'False'
-    ConstraintDescription: It can either be yes or no
+    ConstraintDescription: It can either be True or False
   PrivateSubnet1A:
     Type: 'AWS::EC2::Subnet::Id'
     Description: >-
@@ -691,7 +691,7 @@ Resources:
       SubnetId: !Ref PrivateSubnet1A
       Tags:
         - Key: "Name"
-          Value: "ISENode01"
+          Value: !Ref Node1Hostname
       UserData: !Base64
           'Fn::Join':
             - ''
@@ -744,7 +744,7 @@ Resources:
       SubnetId: !Ref PrivateSubnet1B
       Tags:
         - Key: "Name"
-          Value: "ISENode02"
+          Value: !Ref Node2Hostname
       UserData: !Base64
           'Fn::Join':
             - ''

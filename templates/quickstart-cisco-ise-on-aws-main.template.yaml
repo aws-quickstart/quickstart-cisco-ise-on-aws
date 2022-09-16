@@ -37,8 +37,8 @@ Metadata:
           default: VPC network configuration
         Parameters:
           - VPCCIDR
-          #- PublicSubnet1CIDR
-          #- PublicSubnet2CIDR
+          - PublicSubnet1CIDR
+          - PublicSubnet2CIDR
           - PrivateSubnet1CIDR
           - PrivateSubnet2CIDR
       - Label:
@@ -77,10 +77,10 @@ Metadata:
     ParameterLabels:
       VPCCIDR:
         default: VPC CIDR
-      #PublicSubnet1CIDR:
-      #  default: Public subnet 1 CIDR for network load balancer
-      #PublicSubnet2CIDR:
-      #  default: Public subnet 2 CIDR for network load balancer
+      PublicSubnet1CIDR:
+        default: Public subnet 1 CIDR for network load balancer
+      PublicSubnet2CIDR:
+        default: Public subnet 2 CIDR for network load balancer
       PrivateSubnet1CIDR:
         default: Private subnet 1 CIDR for ISE VM
       PrivateSubnet2CIDR:
@@ -262,6 +262,34 @@ Parameters:
     ConstraintDescription: >-
       This field only supports alphanumeric characters and hyphen (-). Hostname
       should not be more than 19 characters.
+  FailoverPollingRate:
+    Description:
+      The rate (frequency) that determines when CloudWatch Events runs the rule that
+      triggers the Route Monitor Lambda function.
+    Default: rate(60 minutes)
+    AllowedValues:
+      - rate(1 minute)
+      - rate(10 minutes)
+      - rate(60 minutes)
+    Type: String
+  HealthcheckPollingRate:
+    Description:
+      The rate (frequency) that determines when CloudWatch Events runs the rule that
+      triggers the Route Monitor Lambda function.
+    Default: rate(10 minutes)
+    AllowedValues:
+      - rate(1 minute)
+      - rate(10 minutes)
+      - rate(60 minutes)
+    Type: String
+  AutoFailover:
+    Description: Do you wish to enable auto-failover mechanism?
+    Type: String
+    Default: 'False'
+    AllowedValues:
+      - 'True'
+      - 'False'
+    ConstraintDescription: It can either be True or False
   DNSDomain:
     Description: >-
       Enter a domain name in correct syntax (for example, cisco.com). The valid
@@ -761,6 +789,9 @@ Resources:
         password: !Ref password
         ConfirmPwd: !Ref ConfirmPwd
         EmailSubscription: !Ref EmailSubscription
+        AutoFailover: !Ref AutoFailover
+        FailoverPollingRate: !Ref FailoverPollingRate
+        HealthcheckPollingRate: !Ref HealthcheckPollingRate
         LBPrivateAddressSubnet1: !Ref LBPrivateAddressSubnet1
         LBPrivateAddressSubnet2: !Ref LBPrivateAddressSubnet2
         QSS3BucketName:
