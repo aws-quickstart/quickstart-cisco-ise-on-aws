@@ -2472,6 +2472,7 @@ Resources:
                 API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
                 retries = 5
                 Maintenance = get_ssm_parameter(ssm_client,"Maintenance")
+                AutoFailover = get_ssm_parameter(ssm_client,"AutoFailover")
                 logger.info("Primmary Polcy Administration node ip : {}".format(Primary_IP))
                 logger.info("Secondary Polcy Administration node ip : {}".format(Secondary_IP))
                 logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
@@ -2661,6 +2662,8 @@ Resources:
                   logger.info("#Retriving SSM parameters...")
                   Primary_IP = get_ssm_parameter(ssm_client,"Primary_IP")
                   Secondary_IP = get_ssm_parameter(ssm_client,"Secondary_IP")
+                  Primary_FQDN = get_ssm_parameter(ssm_client,"Primary_FQDN")
+                  Secondary_FQDN = get_ssm_parameter(ssm_client,"Secondary_FQDN")
                   SyncStatus = get_ssm_parameter(ssm_client,"SyncStatus")
                   ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
                   ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD",WithDecryption=True)
@@ -2668,10 +2671,13 @@ Resources:
                   API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
                   retries = 5
                   Maintenance = get_ssm_parameter(ssm_client,"Maintenance")
+                  AutoFailover = get_ssm_parameter(ssm_client,"AutoFailover")
                   SyncStatus_OldValue = get_ssm_parameter(ssm_client,"SyncStatus")
                   logger.info("Primmary Polcy Administration node ip : {}".format(Primary_IP))
                   logger.info("Secondary Polcy Administration node ip : {}".format(Secondary_IP))
                   logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
+                  logger.info("AutoFailover : {}".format(AutoFailover))
+                  logger.info("Maintenance : {}".format(Maintenance))
                   #logger.info("API_AUTH : {}".format(API_AUTH))
                   logger.info("API_HEADER : {}".format(API_HEADER))
                   logger.info("Retries : {}".format(retries))
@@ -2687,15 +2693,15 @@ Resources:
                               set_ssm_parameter(ssm_client,"SyncStatus","SYNC_COMPLETED")
                           else :
                               set_ssm_parameter(ssm_client,"SyncStatus","SYNC_FAILED")
-                              send_sns_publish(subject="Cisco ISE [{}]: Deployment health check notification”.format(runtime_region), message = "Secondary Node {} is not in sync with Primary Node {}. Please investigate”format(Secondary_FQDN, Primary_FQDN))
+                              send_sns_publish(subject="Cisco ISE [{}]: Deployment health check notification".format(runtime_region), message = "Secondary Node {} is not in sync with Primary Node {}. Please investigate".format(Secondary_FQDN, Primary_FQDN))
                       else:
                           set_ssm_parameter(ssm_client,"SyncStatus","SYNC_FAILED")
-                          send_sns_publish(subject="Cisco ISE [{}]: Deployment health check notification".format(runtime_region), message = "Deployment is unstable. Primary Node {} returned status_code {}. Please investigate.”.format(Primary_FQDN, str(resp.status_code)))
+                          send_sns_publish(subject="Cisco ISE [{}]: Deployment health check notification".format(runtime_region), message = "Deployment is unstable. Primary Node {} returned status_code {}. Please investigate.".format(Primary_FQDN, str(resp.status_code)))
                   else:
                       logger.info("Deployment is in Maintenance. Health check service is not required.")
               except Exception as e:
                 logging.error('Exception: %s' % e, exc_info=True)
-                send_sns_publish(subject=“Cisco ISE [{}]: Deployment health check notification".format(runtime_region), message = “Primary Node {} is down. Please investigate.”.format(Primary_FQDN))
+                send_sns_publish(subject="Cisco ISE [{}]: Deployment health check notification".format(runtime_region), message = "Primary Node {} is down. Please investigate.".format(Primary_FQDN))
 
 
       MemorySize: 3008
