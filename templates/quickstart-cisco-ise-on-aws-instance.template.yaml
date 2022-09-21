@@ -1780,7 +1780,7 @@ Resources:
                 logger.info("Primmary Polcy Administration node ip : {}".format(Primary_IP))
                 logger.info("Secondary Polcy Administration node ip : {}".format(Secondary_IP))
                 logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
-                logger.info("API_AUTH : {}".format(API_AUTH))
+                #logger.info("API_AUTH : {}".format(API_AUTH))
                 logger.info("API_HEADER : {}".format(API_HEADER))
                 logger.info("Secondary Polcy Administration node fqdn : {}".format(Secondary_FQDN))
                 data = {}
@@ -1921,7 +1921,7 @@ Resources:
             logger.info("Primmary Polcy Administration node ip : {}".format(Primary_IP))
             logger.info("Secondary Polcy Administration node ip : {}".format(Secondary_IP))
             logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
-            logger.info("API_AUTH : {}".format(API_AUTH))
+            #logger.info("API_AUTH : {}".format(API_AUTH))
             logger.info("API_HEADER : {}".format(API_HEADER))
 
             try:
@@ -2044,7 +2044,7 @@ Resources:
               logger.info("Primmary Polcy Administration node ip : {}".format(Primary_IP))
               logger.info("Secondary Polcy Administration node ip : {}".format(Secondary_IP))
               logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
-              logger.info("API_AUTH : {}".format(API_AUTH))
+              #logger.info("API_AUTH : {}".format(API_AUTH))
               logger.info("API_HEADER : {}".format(API_HEADER))
               logger.info("# Register Secondary node to deployment - start...")
               try:
@@ -2187,7 +2187,7 @@ Resources:
 
                   logger.info("Primmary Polcy Administration node ip : {}".format(Primary_IP))
                   logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
-                  logger.info("API_AUTH : {}".format(API_AUTH))
+                  #logger.info("API_AUTH : {}".format(API_AUTH))
                   logger.info("API_HEADER : {}".format(API_HEADER))
 
                   data = {}
@@ -2475,12 +2475,12 @@ Resources:
                 logger.info("Primmary Polcy Administration node ip : {}".format(Primary_IP))
                 logger.info("Secondary Polcy Administration node ip : {}".format(Secondary_IP))
                 logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
-                logger.info("API_AUTH : {}".format(API_AUTH))
+                #logger.info("API_AUTH : {}".format(API_AUTH))
                 logger.info("API_HEADER : {}".format(API_HEADER))
                 logger.info("Retries : {}".format(retries))
                 node_status = ["NotApplicable", "NotInSync", "NotUpgraded", "RegistrationFailed", "ReplicationStopped"]
                 data = {}
-                if not bool(json.loads(Maintenance.lower())):
+                if (not bool(json.loads(Maintenance.lower()))) and bool(json.loads(AutoFailover.lower())):
 
                     if SyncStatus == "SYNC_INPROGRESS" or SyncStatus == "INITIAL":
                         logger.info("Sync status is {}", SyncStatus)
@@ -2672,12 +2672,12 @@ Resources:
                   logger.info("Primmary Polcy Administration node ip : {}".format(Primary_IP))
                   logger.info("Secondary Polcy Administration node ip : {}".format(Secondary_IP))
                   logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
-                  logger.info("API_AUTH : {}".format(API_AUTH))
+                  #logger.info("API_AUTH : {}".format(API_AUTH))
                   logger.info("API_HEADER : {}".format(API_HEADER))
                   logger.info("Retries : {}".format(retries))
                   node_status = ["NotApplicable", "NotInSync", "NotUpgraded", "RegistrationFailed", "ReplicationStopped"]
                   data = {}
-                  if not bool(json.loads(Maintenance.lower())):
+                  if (not bool(json.loads(Maintenance.lower()))) and bool(json.loads(AutoFailover.lower())):
                       url = 'https://{}/api/v1/deployment/node'.format(Primary_IP)
                       resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
                       logger.info("API response for checking node sync status and roles is: {} ".format(resp.text))
@@ -2687,15 +2687,15 @@ Resources:
                               set_ssm_parameter(ssm_client,"SyncStatus","SYNC_COMPLETED")
                           else :
                               set_ssm_parameter(ssm_client,"SyncStatus","SYNC_FAILED")
-                              send_sns_publish(subject="Deployment health check notification: Secondary Node is not in sync with Primary Node", message = "Secondary Node is not in sync with Primary Node.")
+                              send_sns_publish(subject="Cisco ISE [{}]: Deployment health check notification”.format(runtime_region), message = "Secondary Node {} is not in sync with Primary Node {}. Please investigate”format(Secondary_FQDN, Primary_FQDN))
                       else:
                           set_ssm_parameter(ssm_client,"SyncStatus","SYNC_FAILED")
-                          send_sns_publish(subject="Deployment is unstable", message = "Deployment is unstable. PPAN returned status_code {}.".format(str(resp.status_code)))
+                          send_sns_publish(subject="Cisco ISE [{}]: Deployment health check notification".format(runtime_region), message = "Deployment is unstable. Primary Node {} returned status_code {}. Please investigate.”.format(Primary_FQDN, str(resp.status_code)))
                   else:
                       logger.info("Deployment is in Maintenance. Health check service is not required.")
               except Exception as e:
                 logging.error('Exception: %s' % e, exc_info=True)
-                send_sns_publish(subject="Deployment health check notification: PPAN node {} is down".format(Primary_IP), message = "PPAN node {} is down. \n Please investigate.")
+                send_sns_publish(subject=“Cisco ISE [{}]: Deployment health check notification".format(runtime_region), message = “Primary Node {} is down. Please investigate.”.format(Primary_FQDN))
 
 
       MemorySize: 3008
@@ -2831,7 +2831,15 @@ Resources:
               "Resource": "${CheckFailoverSuccessfulLambda.Arn}",
               "Next": "Choice - Is Failover successful?",
               "InputPath": "$",
-              "OutputPath": "$"
+              "OutputPath": "$",
+              "Catch": [
+                {
+                  "ErrorEquals": [
+                    "States.Timeout"
+                  ],
+                  "Next": "Wait for Promotion"
+                }
+              ]
             },
             "Wait for Promotion": {
               "Type": "Wait",
@@ -2863,11 +2871,6 @@ Resources:
                   "Variable": "$.FailoverStatus",
                   "StringEquals": "failure",
                   "Next": "SNSPublishFailoverUnsuccessful"
-                },
-                {
-                  "Variable": "$.FailoverStatus",
-                  "StringMatches": "skip-failover",
-                  "Next": "SNSPublishManualFailover"
                 }
               ],
               "Default": "Wait for Promotion",
@@ -2877,8 +2880,8 @@ Resources:
               "Type": "Task",
               "Resource": "arn:aws:states:::sns:publish",
               "Parameters": {
-                "Subject": "Update from Failover State machine",
-                "Message": "Failover is not successful!",
+                "Subject": "Cisco ISE: Update from Failover State machine",
+                "Message": "Failover is not successful! Please check the logs.",
                 "TopicArn": "${NotifyAdminTopic}"
               },
               "Next": "Failure is unsuccessful"
@@ -2887,7 +2890,7 @@ Resources:
               "Type": "Task",
               "Resource": "arn:aws:states:::sns:publish",
               "Parameters": {
-                "Subject": "Update from Failover State machine",
+                "Subject": "Cisco ISE: Update from Failover State machine",
                 "Message": "Failover is successful!",
                 "TopicArn": "${NotifyAdminTopic}"
               },
@@ -2902,15 +2905,6 @@ Resources:
             },
             "PPAN is healthy. Failover not required!": {
               "Type": "Succeed"
-            },
-            "SNSPublishManualFailover": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::sns:publish",
-              "Parameters": {
-                "TopicArn": "${NotifyAdminTopic}",
-                "Message": "Auto-failover is not configured. Hence, manual Promotion of SPAN to PPAN is required.!"
-              },
-              "End": true
             }
           }
         }
@@ -2967,7 +2961,7 @@ Resources:
                   logger.info("Primmary Polcy Administration node ip : {}".format(Primary_IP))
                   logger.info("Secondary Polcy Administration node ip : {}".format(Secondary_IP))
                   logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
-                  logger.info("API_AUTH : {}".format(API_AUTH))
+                  #logger.info("API_AUTH : {}".format(API_AUTH))
                   logger.info("API_HEADER : {}".format(API_HEADER))
                   logger.info("Retries : {}".format(retries))
 
@@ -3104,7 +3098,7 @@ Resources:
                   logging.info("Primmary Polcy Administration node ip : {}".format(Primary_IP))
                   logging.info("Secondary Polcy Administration node ip : {}".format(Secondary_IP))
                   logging.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
-                  logging.info("API_AUTH : {}".format(API_AUTH))
+                  #logging.info("API_AUTH : {}".format(API_AUTH))
                   logging.info("API_HEADER : {}".format(API_HEADER))
                   logger.info("SyncStatus : {}".format(SyncStatus))
                   data = {}
@@ -3254,25 +3248,21 @@ Resources:
                   logging.info("API_HEADER : {}".format(API_HEADER))
                   logging.info("AutoFailover : {}".format(AutoFailover))
                   data = {}
-                  if bool(json.loads(AutoFailover.lower())):
-                    url = 'https://{}/api/v1/deployment/promote'.format(Secondary_IP)
-                    try:
-                        resp = requests.post(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
-                        logging.info("API response for {} is {} ".format(Secondary_IP, resp.text))
-                        if resp.status_code == 200 and "success" in json.loads(resp.text):
-                            logging.info("SPAN to PPAN Promotion successful for - {}".format(Secondary_IP))
-                            timer.cancel()
-                            return "running"
-                        else:
-                            raise RuntimeError('Failed to get promote SPAN to PPAN')
-                    except Exception as e:
-                        logging.error("Exception occured while promoting SPAN {}".format(Secondary_IP))
-                        logging.error('Exception: %s' % e, exc_info=True)
+                  url = 'https://{}/api/v1/deployment/promote'.format(Secondary_IP)
+                  try:
+                    resp = requests.post(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
+                    logging.info("API response for {} is {} ".format(Secondary_IP, resp.text))
+                    if resp.status_code == 200 and "success" in json.loads(resp.text):
+                        logging.info("SPAN to PPAN Promotion successful for - {}".format(Secondary_IP))
                         timer.cancel()
-                        return "down"
-                  else:
-                    # send_sns_publish(subject="Failover notification: Promote SPAN to PPAN", message = "PPAN is not serviceable. Manual Failover required.")
-                    return "manual-failover"
+                        return "running"
+                    else:
+                        raise RuntimeError('Failed to get promote SPAN to PPAN')
+                  except Exception as e:
+                    logging.error("Exception occured while promoting SPAN {}".format(Secondary_IP))
+                    logging.error('Exception: %s' % e, exc_info=True)
+                    timer.cancel()
+                    return "down"
 
               except Exception as e:
                   timer.cancel()
@@ -3373,25 +3363,21 @@ Resources:
                   logging.info("#Retriving SSM parameters...")
                   Primary_IP = get_ssm_parameter(ssm_client,"Primary_IP")
                   Secondary_IP = get_ssm_parameter(ssm_client,"Secondary_IP")
-                  Primary_FQDN = get_ssm_parameter(ssm_client,"Secondary_FQDN")
-                  Secondary_FQDN = get_ssm_parameter(ssm_client,"Primary_FQDN")
+                  Primary_FQDN = get_ssm_parameter(ssm_client,"Primary_FQDN")
+                  Secondary_FQDN = get_ssm_parameter(ssm_client,"Secondary_FQDN")
                   SyncStatus = get_ssm_parameter(ssm_client,"SyncStatus")
                   ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
                   ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD",WithDecryption=True)
                   API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
                   API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-                  retries = 5
+                  retries = 15
                   logging.info("Primmary Polcy Administration node ip : {}".format(Primary_IP))
                   logging.info("Secondary Polcy Administration node ip : {}".format(Secondary_IP))
                   logging.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
-                  logging.info("API_AUTH : {}".format(API_AUTH))
+                  #logging.info("API_AUTH : {}".format(API_AUTH))
                   logging.info("API_HEADER : {}".format(API_HEADER))
 
                   data = {}
-
-                  if "PromotionStatus" in event:
-                      if event["PromotionStatus"] == "manual-failover":
-                          return {"FailoverStatus": "skip-failover"}
 
                   url = 'https://{}/api/v1/deployment/node'.format(Secondary_IP)
                   try:
