@@ -2841,7 +2841,7 @@ Resources:
               "Catch": [
                 {
                   "ErrorEquals": [
-                    "States.Timeout"
+                    "States.ALL"
                   ],
                   "Next": "Wait for Promotion"
                 }
