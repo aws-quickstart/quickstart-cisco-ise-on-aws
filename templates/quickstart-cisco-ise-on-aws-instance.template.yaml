@@ -2482,7 +2482,6 @@ Resources:
                 node_status = ["NotApplicable", "NotInSync", "NotUpgraded", "RegistrationFailed", "ReplicationStopped"]
                 data = {}
                 if (not bool(json.loads(Maintenance.lower()))) and bool(json.loads(AutoFailover.lower())):
-
                     if SyncStatus == "SYNC_INPROGRESS" or SyncStatus == "INITIAL":
                         logger.info("Sync status is {}", SyncStatus)
                         logger.info("Application still being deployed. Failover not required!")
@@ -2509,7 +2508,7 @@ Resources:
                         logger.info("Need not execute Failover state machine. Sync status is unknown.")
                         return "skip"
                 else:
-                        logger.info("Need not execute Failover state machine. Deployment is in maintenance")
+                        logger.info("Deployment is in Maintenance or Auto-failover is disabled. Health check service is not required.")
                         return "skip"
 
             except Exception as e:
@@ -2683,10 +2682,14 @@ Resources:
                   logger.info("Retries : {}".format(retries))
                   node_status = ["NotApplicable", "NotInSync", "NotUpgraded", "RegistrationFailed", "ReplicationStopped"]
                   data = {}
-                  if (not bool(json.loads(Maintenance.lower()))) and bool(json.loads(AutoFailover.lower())):
+                  if ((not bool(json.loads(Maintenance.lower()))) and bool(json.loads(AutoFailover.lower()))):
                       url = 'https://{}/api/v1/deployment/node'.format(Primary_IP)
                       resp = requests.get(url, headers=API_HEADER, auth=API_AUTH, data=json.dumps(data), verify=False)
-                      logger.info("API response for checking node sync status and roles is: {} ".format(resp.text))
+                      logger.info("API response for checking node sync status and roles is: ")
+
+                      if resp.status_code == 401:
+                          logger.info("Username/Password is incorrect. Please check the ISE credentials in SSM Parameter Store.")
+                          return "skip"
                       json_resp = json.loads(resp.text)
                       if resp.status_code == 200:
                           if json_resp["response"][0]['nodeStatus'] == "Connected" and json_resp["response"][1]['nodeStatus'] == "Connected":
@@ -2698,7 +2701,7 @@ Resources:
                           set_ssm_parameter(ssm_client,"SyncStatus","SYNC_FAILED")
                           send_sns_publish(subject="Cisco ISE [{}]: Deployment health check notification".format(runtime_region), message = "Deployment is unstable. Primary Node {} returned status_code {}. Please investigate.".format(Primary_FQDN, str(resp.status_code)))
                   else:
-                      logger.info("Deployment is in Maintenance. Health check service is not required.")
+                      logger.info("Deployment is in Maintenance or Auto-failover is disabled. Health check service is not required.")
               except Exception as e:
                 logging.error('Exception: %s' % e, exc_info=True)
                 send_sns_publish(subject="Cisco ISE [{}]: Deployment health check notification".format(runtime_region), message = "Primary Node {} is down. Please investigate.".format(Primary_FQDN))
