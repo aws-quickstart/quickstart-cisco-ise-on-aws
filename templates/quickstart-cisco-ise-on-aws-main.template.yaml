@@ -124,25 +124,25 @@ Metadata:
 Parameters:
   PrivateSubnet1CIDR:
     AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
-    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/17-28
     Default: 10.0.0.0/19
     Description: CIDR block for private subnet 1 located in Availability Zone 1.
     Type: String
   PrivateSubnet2CIDR:
     AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
-    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/17-28
     Default: 10.0.32.0/19
     Description: CIDR block for private subnet 2 located in Availability Zone 2.
     Type: String
   PublicSubnet1CIDR:
     AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
-    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/17-28
     Default: 10.0.128.0/20
     Description: CIDR block for the public (DMZ) subnet 1 located in Availability Zone 1.
     Type: String
   PublicSubnet2CIDR:
     AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
-    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/17-28
     Default: 10.0.144.0/20
     Description: CIDR block for the public (DMZ) subnet 2 located in Availability Zone 2.
     Type: String
@@ -164,7 +164,7 @@ Parameters:
     Type: String
   VPCCIDR:
     AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
-    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-26
     Default: 10.0.0.0/16
     Description: CIDR block for the VPC.
     Type: String
@@ -262,20 +262,20 @@ Parameters:
     ConstraintDescription: >-
       This field only supports alphanumeric characters and hyphen (-). Hostname
       should not be more than 19 characters.
-  FailoverPollingRate:
+  FailoverRate:
     Description:
-      The rate (frequency) that determines when CloudWatch Events runs the rule that
-      triggers the Route Monitor Lambda function.
+      The rate (frequency) that determines when CloudWatch Events runs the rule 
+      that triggers the Lambda function which triggers Failover State Machine.
     Default: rate(60 minutes)
     AllowedValues:
       - rate(1 minute)
       - rate(10 minutes)
       - rate(60 minutes)
     Type: String
-  HealthcheckPollingRate:
+  HealthcheckRate:
     Description:
-      The rate (frequency) that determines when CloudWatch Events runs the rule that
-      triggers the Route Monitor Lambda function.
+      The rate (frequency) that determines when CloudWatch Events runs the rule 
+      that triggers the Lambda function which checks health status of ISE deployment.
     Default: rate(10 minutes)
     AllowedValues:
       - rate(1 minute)
@@ -285,11 +285,11 @@ Parameters:
   AutoFailover:
     Description: Do you wish to enable auto-failover mechanism?
     Type: String
-    Default: 'False'
+    Default: 'DISABLED'
     AllowedValues:
-      - 'True'
-      - 'False'
-    ConstraintDescription: It can either be True or False
+      - 'ENABLED'
+      - 'DISABLED'
+    ConstraintDescription: It can either be ENABLED or DISABLED
   DNSDomain:
     Description: >-
       Enter a domain name in correct syntax (for example, cisco.com). The valid
@@ -790,8 +790,8 @@ Resources:
         ConfirmPwd: !Ref ConfirmPwd
         EmailSubscription: !Ref EmailSubscription
         AutoFailover: !Ref AutoFailover
-        FailoverPollingRate: !Ref FailoverPollingRate
-        HealthcheckPollingRate: !Ref HealthcheckPollingRate
+        FailoverRate: !Ref FailoverRate
+        HealthcheckRate: !Ref HealthcheckRate
         LBPrivateAddressSubnet1: !Ref LBPrivateAddressSubnet1
         LBPrivateAddressSubnet2: !Ref LBPrivateAddressSubnet2
         QSS3BucketName:

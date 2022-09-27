@@ -33,8 +33,6 @@ Metadata:
           - Node1Hostname
           - Node2Hostname
           - KeyPairName
-          - ManagementSubnet1Id
-          - ManagementSubnet2Id
           - TimeZone
           - ISEInstanceType
           - EBSEncrypt
@@ -45,6 +43,8 @@ Metadata:
           - VPCID
           - DNSDomain
           - VPCCIDR
+          - ManagementSubnet1Id
+          - ManagementSubnet2Id
           - PrivateSubnet1CIDR
           - PrivateSubnet2CIDR
       - Label:
@@ -628,24 +628,24 @@ Parameters:
       - WET
   password:
     Description: >-
-      Enter a password for the username "admin". The password must be aligned
-      with the Cisco ISE password policy (must contain one or more lowercase, uppercase, numeric, and non-alphanumeric characters). The configured password is used for
-      Cisco ISE GUI access. Warning: The password is displayed in plaintext in
-      the User Data section of the Instance settings window in the AWS Console.
+      Enter a password for the username \"iseadmin\".
+      The password must be aligned with the Cisco ISE password policy.
+      The configured password is used for Cisco ISE GUI access.
+      Warning: The password is displayed in plaintext in the User Data section of the Instance settings window in the AWS Console.
     NoEcho: 'True'
     Type: String
     AllowedPattern: >-
-      ^(?=.*?[A-Z])(?=.*?[a-z])(?i)(?!.*?admin|.*?cisco|.*?nimda|.*?ocsic)(?-i)(?=.*?[0-9]).{6,}$
+      ^((?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@~*!,+=_-])(?!.*?[iI]{1}[sS]{1}[eE]{1}[aA]{1}[dD]{1}[mM]{1}[iI]{1}[nN]{1})(?!.*?[nN]{1}[iI]{1}[mM]{1}[dD]{1}[aA]{1}[eE]{1}[sS]{1}[iI]{1})(?!.*?[cC]{1}[iI]{1}[sS]{1}[cC]{1}[oO]{1})(?!.*?[oO]{1}[cC]{1}[sS]{1}[iI]{1}[cC]{1})|(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?!.*?[iI]{1}[sS]{1}[eE]{1}[aA]{1}[dD]{1}[mM]{1}[iI]{1}[nN]{1})(?!.*?[nN]{1}[iI]{1}[mM]{1}[dD]{1}[aA]{1}[eE]{1}[sS]{1}[iI]{1})(?!.*?[cC]{1}[iI]{1}[sS]{1}[cC]{1}[oO]{1})(?!.*?[oO]{1}[cC]{1}[sS]{1}[iI]{1}[cC]{1})).{6,25}$
     ConstraintDescription: >-
-      Password constraints: One digit is required. One uppercase letter. One
-      lowercase letter. Password should not be the same as username(admin).
-      Should not contain the word cisco. Minimum password length should be 6
-      character.
+      The password for username (iseadmin) to log in to the Cisco ISE GUI.
+      The password must contain a minimum of 6 and maximum of 25 characters, and must include at least one numeral, one uppercase letter, and one lowercase letter.
+      Password should not be the same as username or its reverse(iseadmin or nimdaesi) or (cisco or ocsic).
+      Allowed Special Characters @~*!,+=_-
   ConfirmPwd:
     Description: Retype Password
     NoEcho: 'True'
     Type: String
-  FailoverPollingRate:
+  FailoverRate:
     Description:
       The rate (frequency) that determines when CloudWatch Events runs the rule that
       triggers the Route Monitor Lambda function.
@@ -655,7 +655,7 @@ Parameters:
       - rate(10 minutes)
       - rate(60 minutes)
     Type: String
-  HealthcheckPollingRate:
+  HealthcheckRate:
     Description:
       The rate (frequency) that determines when CloudWatch Events runs the rule that
       triggers the Route Monitor Lambda function.
@@ -668,11 +668,11 @@ Parameters:
   AutoFailover:
     Description: Do you wish to enable auto-failover mechanism?
     Type: String
-    Default: 'False'
+    Default: 'DISABLED'
     AllowedValues:
-      - 'True'
-      - 'False'
-    ConstraintDescription: It can either be True or False
+      - 'ENABLED'
+      - 'DISABLED'
+    ConstraintDescription: It can either be ENABLED or DISABLED
   StorageSize:
     Description: >-
       Specify the storage in GB (Minimum 300GB and Maximum 2400GB). 600GB is
@@ -748,8 +748,8 @@ Resources:
         KeyPairName: !Ref KeyPairName
         PrivateSubnet1A: !Ref ManagementSubnet1Id
         PrivateSubnet1B: !Ref ManagementSubnet2Id
-        PrivateSubnet1CIDR: !Ref PrivateSubnet1CIDR
-        PrivateSubnet2CIDR: !Ref PrivateSubnet2CIDR
+        # PrivateSubnet1CIDR: !Ref PrivateSubnet1CIDR
+        # PrivateSubnet2CIDR: !Ref PrivateSubnet2CIDR
         EBSEncrypt: !Ref EBSEncrypt
         StorageSize: !Ref StorageSize
         TimeZone: !Ref TimeZone
@@ -762,8 +762,8 @@ Resources:
         LBPrivateAddressSubnet1: !Ref LBPrivateAddressSubnet1
         LBPrivateAddressSubnet2: !Ref LBPrivateAddressSubnet2
         AutoFailover: !Ref AutoFailover
-        FailoverPollingRate: !Ref FailoverPollingRate
-        HealthcheckPollingRate: !Ref HealthcheckPollingRate
+        FailoverRate: !Ref FailoverRate
+        HealthcheckRate: !Ref HealthcheckRate
         EmailSubscription: !Ref EmailSubscription
         VPCID: !Ref VPCID
         VPCCIDR: !Ref VPCCIDR
