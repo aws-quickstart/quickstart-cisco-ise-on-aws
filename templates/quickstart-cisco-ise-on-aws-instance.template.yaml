@@ -571,7 +571,7 @@ Parameters:
       - WET
   password:
     Description: >-
-      Enter a password for the username \"iseadmin\".
+      Enter a password for the username \"admin\".
       The password must be aligned with the Cisco ISE password policy.
       The configured password is used for Cisco ISE GUI access.
       Warning: The password is displayed in plaintext in the User Data section of the Instance settings window in the AWS Console.
@@ -580,9 +580,9 @@ Parameters:
     AllowedPattern: >-
       ^((?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@~*!,+=_-])(?!.*?[iI]{1}[sS]{1}[eE]{1}[aA]{1}[dD]{1}[mM]{1}[iI]{1}[nN]{1})(?!.*?[nN]{1}[iI]{1}[mM]{1}[dD]{1}[aA]{1}[eE]{1}[sS]{1}[iI]{1})(?!.*?[cC]{1}[iI]{1}[sS]{1}[cC]{1}[oO]{1})(?!.*?[oO]{1}[cC]{1}[sS]{1}[iI]{1}[cC]{1})|(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?!.*?[iI]{1}[sS]{1}[eE]{1}[aA]{1}[dD]{1}[mM]{1}[iI]{1}[nN]{1})(?!.*?[nN]{1}[iI]{1}[mM]{1}[dD]{1}[aA]{1}[eE]{1}[sS]{1}[iI]{1})(?!.*?[cC]{1}[iI]{1}[sS]{1}[cC]{1}[oO]{1})(?!.*?[oO]{1}[cC]{1}[sS]{1}[iI]{1}[cC]{1})).{6,25}$
     ConstraintDescription: >-
-      The password for username (iseadmin) to log in to the Cisco ISE GUI.
+      The password for username (admin) to log in to the Cisco ISE GUI.
       The password must contain a minimum of 6 and maximum of 25 characters, and must include at least one numeral, one uppercase letter, and one lowercase letter.
-      Password should not be the same as username or its reverse(iseadmin or nimdaesi) or (cisco or ocsic).
+      Password should not be the same as username or its reverse(admin or nimdaesi) or (cisco or ocsic).
       Allowed Special Characters @~*!,+=_-
   StorageSize:
     Description: >-
@@ -2479,7 +2479,6 @@ Resources:
                 API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
                 retries = 5
                 Maintenance = get_ssm_parameter(ssm_client,"Maintenance")
-                AutoFailover = get_ssm_parameter(ssm_client,"AutoFailover")
                 logger.info("Primmary Polcy Administration node ip : {}".format(Primary_IP))
                 logger.info("Secondary Polcy Administration node ip : {}".format(Secondary_IP))
                 logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
@@ -2488,7 +2487,7 @@ Resources:
                 logger.info("Retries : {}".format(retries))
                 node_status = ["NotApplicable", "NotInSync", "NotUpgraded", "RegistrationFailed", "ReplicationStopped"]
                 data = {}
-                if (not Maintenance == "ENABLED") and AutoFailover == "ENABLED":
+                if (not Maintenance == "ENABLED"):
                     if SyncStatus == "SYNC_INPROGRESS" or SyncStatus == "INITIAL":
                         logger.info("Sync status is {}", SyncStatus)
                         logger.info("Application still being deployed. Failover not required!")
@@ -2546,7 +2545,7 @@ Resources:
       Description: >
         A schedule for the Failover Lambda function..
       ScheduleExpression: !Ref FailoverRate
-      State: ENABLED
+      State: !Ref AutoFailover
       Targets:
         - Arn: !Sub ${TriggerFailoverLambda.Arn}
           Id: FailoverLambdaSchedule
@@ -2677,12 +2676,10 @@ Resources:
                   API_HEADER = {'Content-Type': 'application/json', 'Accept': 'application/json'}
                   retries = 5
                   Maintenance = get_ssm_parameter(ssm_client,"Maintenance")
-                  AutoFailover = get_ssm_parameter(ssm_client,"AutoFailover")
                   SyncStatus_OldValue = get_ssm_parameter(ssm_client,"SyncStatus")
                   logger.info("Primmary Polcy Administration node ip : {}".format(Primary_IP))
                   logger.info("Secondary Polcy Administration node ip : {}".format(Secondary_IP))
                   logger.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
-                  logger.info("AutoFailover : {}".format(AutoFailover))
                   logger.info("Maintenance : {}".format(Maintenance))
                   #logger.info("API_AUTH : {}".format(API_AUTH))
                   logger.info("API_HEADER : {}".format(API_HEADER))
@@ -3267,7 +3264,6 @@ Resources:
                   Primary_IP = get_ssm_parameter(ssm_client,"Primary_IP")
                   Secondary_IP = get_ssm_parameter(ssm_client,"Secondary_IP")
                   SyncStatus = get_ssm_parameter(ssm_client,"SyncStatus")
-                  AutoFailover = get_ssm_parameter(ssm_client,"AutoFailover")
                   ADMIN_USERNAME = get_ssm_parameter(ssm_client,"ADMIN_USERNAME")
                   ADMIN_PASSWORD = get_ssm_parameter(ssm_client,"ADMIN_PASSWORD",WithDecryption=True)
                   API_AUTH = (ADMIN_USERNAME, ADMIN_PASSWORD)
@@ -3279,7 +3275,6 @@ Resources:
                   logging.info("ADMIN_USERNAME : {}".format(ADMIN_USERNAME))
                   logging.info("API_AUTH : {}".format(API_AUTH))
                   logging.info("API_HEADER : {}".format(API_HEADER))
-                  logging.info("AutoFailover : {}".format(AutoFailover))
                   data = {}
                   url = 'https://{}/api/v1/deployment/promote'.format(Secondary_IP)
                   try:

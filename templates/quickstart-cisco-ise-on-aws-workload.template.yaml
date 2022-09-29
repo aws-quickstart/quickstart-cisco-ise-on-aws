@@ -120,6 +120,17 @@ Metadata:
         default: Quick Start S3 bucket Region
       QSS3KeyPrefix:
         default: Quick Start S3 key prefix
+      AutoFailover:
+        default: Automatic Failover
+      FailoverRate:
+        default: Failover Rate
+      HealthcheckRate:
+        default: Healthcheck Rate
+      LBPrivateAddressSubnet1:
+        default: Load Balancer Private IP Address for Subnet-1
+      LBPrivateAddressSubnet2:
+        default: Load Balancer Private IP Address for Subnet-2
+
 Parameters:
   KeyPairName:
     Description: >-
