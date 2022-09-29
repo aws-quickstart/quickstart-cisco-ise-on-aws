@@ -3010,7 +3010,7 @@ Resources:
                                       }
                       elif resp.status_code == 401:
                           logger.info("Username/Password is incorrect. Please check the ISE credentials in SSM Parameter Store.")
-                          send_sns_publish(subject="Cisco ISE [{}]: Deployment health check notification".format(runtime_region), message = "Admin Username/Password credentials are incorrect.”)
+                          send_sns_publish(subject="Cisco ISE [{}]: Deployment health check notification".format(runtime_region), message = "Admin Username/Password credentials are incorrect.")
                           raise RuntimeError('Admin Username/Password credentials are incorrect')
                       else:
                           raise RuntimeError('Failed to get successful response from PPAN')
