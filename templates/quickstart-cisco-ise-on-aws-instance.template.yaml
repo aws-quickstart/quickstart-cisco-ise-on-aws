@@ -95,14 +95,6 @@ Parameters:
       - 'ENABLED'
       - 'DISABLED'
     ConstraintDescription: It can either be ENABLED or DISABLED
-  Maintenance:
-    Description: Enable this parameter to pause Healthcheck and Auto-Failover
-    Type: String
-    Default: 'DISABLED'
-    AllowedValues:
-      - 'ENABLED'
-      - 'DISABLED'
-    ConstraintDescription: It can either be ENABLED or DISABLED
   PrivateSubnet1A:
     Type: 'AWS::EC2::Subnet::Id'
     Description: >-
@@ -1405,13 +1397,6 @@ Resources:
               timer.cancel()
               cfnresponse.send(event, context, status, responseData)
 
-  AutoFailoverParameter:
-     Type: AWS::SSM::Parameter
-     Properties:
-       Description: Parameter which enables Auto-failover
-       Name: AutoFailover
-       Type: String
-       Value: !Ref AutoFailover
   ISENode1IPParameter:
      Type: AWS::SSM::Parameter
      Properties:
@@ -1468,10 +1453,10 @@ Resources:
   MaintenanceParameter:
     Type: AWS::SSM::Parameter
     Properties:
-      Description: Set this parameter to True for Maintenance
+      Description: Set this parameter to ENABLED for Maintenance
       Name: Maintenance
       Type: String
-      Value: !Ref Maintenance
+      Value: DISABLED
 
   DeploymentStateMachineLambdaRole:
     Metadata:
@@ -2514,7 +2499,7 @@ Resources:
                         logger.info("Need not execute Failover state machine. Sync status is unknown.")
                         return "skip"
                 else:
-                        logger.info("Deployment is in Maintenance or Auto-failover is disabled. Health check service is not required.")
+                        logger.info("Deployment is in Maintenance. Health check service is not required.")
                         return "skip"
 
             except Exception as e:
@@ -2707,7 +2692,7 @@ Resources:
                           set_ssm_parameter(ssm_client,"SyncStatus","SYNC_FAILED")
                           send_sns_publish(subject="Cisco ISE [{}]: Deployment health check notification".format(runtime_region), message = "Deployment is unstable. Primary Node {} returned status_code {}. Please investigate.".format(Primary_FQDN, str(resp.status_code)))
                   else:
-                      logger.info("Deployment is in Maintenance or Auto-failover is disabled. Health check service is not required.")
+                      logger.info("Deployment is in Maintenance. Health check service is not required.")
               except Exception as e:
                 logging.error('Exception: %s' % e, exc_info=True)
                 send_sns_publish(subject="Cisco ISE [{}]: Deployment health check notification".format(runtime_region), message = "Primary Node {} is down. Please investigate.".format(Primary_FQDN))
@@ -2749,9 +2734,9 @@ Resources:
                     "States.ALL"
                   ],
                   "BackoffRate": 1,
-                  "IntervalSeconds": 60,
+                  "IntervalSeconds": 180,
                   "MaxAttempts": 5,
-                  "Comment": "Retry PPAN lambda status for 15mins (Every 3mins)"
+                  "Comment": "Retry PPAN lambda status Every 3mins"
                 }
               ],
               "TimeoutSeconds": 120,
@@ -3105,6 +3090,16 @@ Resources:
 
                   return response
 
+          def send_sns_publish(subject, message):
+              client = boto3.client('sns')
+              TopicArn = [item["TopicArn"] for item in client.list_topics()['Topics'] if "NotifyAdminTopic" in item["TopicArn"]]
+              logger.info("Sending SNS publish..")
+              response = client.publish(
+                  Subject= subject,
+                  Message= message,
+                  TopicArn= TopicArn[0]
+                  )
+
           def timeout(event, context):
                   logging.error('Execution is about to time out, sending failure response to CloudFormation')
                   requests_data=json.dumps(data=dict(Status='FAILURE',Reason='Lambda timeout',UniqueId='ISENodeStates',Data='failed due to timeout')).encode('utf-8')
@@ -3146,6 +3141,7 @@ Resources:
                                   timer.cancel()
                                   return "running"
                       else:
+                          send_sns_publish(subject="Cisco ISE [{}]: Notification from Failover State Machine".format(runtime_region), message = "API Gateway on SPAN is not accessible. Cannot proceed with failover!")
                           raise RuntimeError('Failed to get successful response from SPAN')
                   except Exception as e:
                       logger.error("Exception occured while executing get node details api for {}".format(Secondary_IP))
