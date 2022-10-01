@@ -2679,7 +2679,7 @@ Resources:
 
                       if resp.status_code == 401:
                           logger.info("Username/Password is incorrect. Please check the ISE credentials in SSM Parameter Store.")
-                          send_sns_publish(subject="Cisco ISE [{}]: Deployment health check notification".format(runtime_region), message = "Admin Username/Password credentials are incorrect.”)
+                          send_sns_publish(subject="Cisco ISE [{}]: Deployment health check notification".format(runtime_region), message = "Admin Username/Password credentials are incorrect.")
                           return "skip"
                       json_resp = json.loads(resp.text)
                       if resp.status_code == 200:
@@ -2816,7 +2816,7 @@ Resources:
               "Resource": "arn:aws:states:::sns:publish",
               "Parameters": {
                 "Subject": "Update from Failover State machine",
-                "Message": "SPAN Gateway is disabled. \nCannot proceed with failover",
+                "Message": "API Gateway on SPAN is not accessible. Cannot proceed with failover!",
                 "TopicArn": "${NotifyAdminTopic}"
               },
               "Next": "SPAN Gateway is down!"
@@ -3141,7 +3141,6 @@ Resources:
                                   timer.cancel()
                                   return "running"
                       else:
-                          send_sns_publish(subject="Cisco ISE [{}]: Notification from Failover State Machine".format(runtime_region), message = "API Gateway on SPAN is not accessible. Cannot proceed with failover!")
                           raise RuntimeError('Failed to get successful response from SPAN')
                   except Exception as e:
                       logger.error("Exception occured while executing get node details api for {}".format(Secondary_IP))
