@@ -793,8 +793,6 @@ Resources:
           Fn::GetAtt:
           - VPCStack
           - Outputs.PrivateSubnet2AID
-        PrivateSubnet1CIDR: !Ref PrivateSubnet1CIDR
-        PrivateSubnet2CIDR: !Ref PrivateSubnet2CIDR
         TimeZone: !Ref TimeZone
         ISEInstanceType: !Ref ISEInstanceType
         EBSEncrypt: !Ref EBSEncrypt

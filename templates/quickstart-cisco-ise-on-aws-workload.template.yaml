@@ -48,8 +48,6 @@ Metadata:
           - VPCCIDR
           - ManagementSubnet1Id
           - ManagementSubnet2Id
-          - PrivateSubnet1CIDR
-          - PrivateSubnet2CIDR
       - Label:
           default: ISE Services
         Parameters:
@@ -95,10 +93,6 @@ Metadata:
         default: EBS Encryption
       StorageSize:
         default: Volume Size
-      PrivateSubnet1CIDR:
-        default: Private subnet 1 CIDR
-      PrivateSubnet2CIDR:
-        default: Private subnet 2 CIDR
       VPCCIDR:
         default: VPC CIDR
       VPCID:
@@ -205,18 +199,6 @@ Parameters:
     Type: 'AWS::EC2::Subnet::Id'
     Description: >-
       ID of the public subnet in Availability Zone 2 of your existing VPC (e.g., subnet-z0376dab).
-  PrivateSubnet1CIDR:
-    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
-    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
-    Default: 10.0.0.0/19
-    Description: CIDR block for private subnet 1 located in Availability Zone 1.
-    Type: String
-  PrivateSubnet2CIDR:
-    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
-    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
-    Default: 10.0.32.0/19
-    Description: CIDR block for private subnet 2 located in Availability Zone 2.
-    Type: String
   Node1Hostname:
     Description: >-
       Enter the hostname. This field only supports alphanumeric characters and
@@ -762,8 +744,6 @@ Resources:
         KeyPairName: !Ref KeyPairName
         PrivateSubnet1A: !Ref ManagementSubnet1Id
         PrivateSubnet1B: !Ref ManagementSubnet2Id
-        # PrivateSubnet1CIDR: !Ref PrivateSubnet1CIDR
-        # PrivateSubnet2CIDR: !Ref PrivateSubnet2CIDR
         EBSEncrypt: !Ref EBSEncrypt
         StorageSize: !Ref StorageSize
         TimeZone: !Ref TimeZone
