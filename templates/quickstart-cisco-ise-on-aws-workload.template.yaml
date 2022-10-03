@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
   AWS Cloud Formation Template for Cisco Identity Service Engine. CFT Version :
-  4.0 (qs-1sp7ritjt)
+  4.0 (qs-1tfq7mgcr)
 Metadata:
   LintSpellExclude:
     - openapi
@@ -37,6 +37,9 @@ Metadata:
           - ISEInstanceType
           - EBSEncrypt
           - StorageSize
+          - FailoverRate
+          - AutoFailover
+          - HealthcheckRate
       - Label:
           default: ISE Network Configuration
         Parameters:
