@@ -4,7 +4,16 @@
 After deployment, you must do the following:
 
 * Attach the workload VPCs to the on-premise network via https://docs.aws.amazon.com/vpn/latest/s2svpn/index.html[AWS Site-to-Site VPN^] or the like.
-* Update the VPC route table for the workload subnets. For more information, see https://docs.aws.amazon.com/vpc/latest/userguide/WorkWithRouteTables.html#AddRemoveRoutes[Add and remove routes from a route table^].
+* Update the VPC route tables for the workload subnets. For more information, see https://docs.aws.amazon.com/vpc/latest/userguide/WorkWithRouteTables.html#AddRemoveRoutes[Add and remove routes from a route table^].
+* Put the deployment in maintenance by updating the parameter Maintenance to True.
+* Change the password of the user "admin" both in ISE admin web UI and ISE admin CLI. Update Password Lifetime. See https://www.cisco.com/c/en/us/td/docs/security/ise/3-1/admin_guide/b_ise_admin_3_1/b_ISE_admin_31_overview.html#concept_7642DD36C0DD424CA423615BF013D0B9[Administrative Access to Cisco ISE^].
+* Optionally, for API access, create a new ISE admin user in the admin group "ERS Admin".
+* Update the parameter ADMIN_PASSWORD in the AWS System Manager parameter store. If using the new ISE admin user created for API access, update both the parameters ADMIN_USERNAME and ADMIN_PASSWORD.
+* Enable API Gateway on the secondary ISE node. For more information, see https://developer.cisco.com/docs/identity-services-engine/latest/#!cisco-ise-api-framework/cisco-ise-api-gateway[Cisco ISE API Gateway^].
+* Install the latest patch of ISE 3.1. See https://www.cisco.com/c/en/us/td/docs/security/ise/3-1/release_notes/b_ise_31_RN.html#id_82860[Release Notes for Cisco Identity Services Engine, Release 3.1 > Install a New Patch^].
+* https://www.cisco.com/c/en/us/td/docs/security/ise/3-1/admin_guide/b_ise_admin_3_1/b_ISE_admin_31_basic_setup.html#task_E04823B79DCD41EABFAD358D882CE7CA[Export Cisco ISE CA Certificates and Keys^] from the primary ISE node. Then, https://www.cisco.com/c/en/us/td/docs/security/ise/3-1/admin_guide/b_ise_admin_3_1/b_ISE_admin_31_basic_setup.html#task_574F728D24F84475A6099F0D9D3B76B1[Import Cisco ISE CA Certificates and Keys^] into the secondary ISE node. 
+* End the maintenance by update the parameter Maintenance to False.
+* Later before performing any maintenance, set the parameter Maintenance to true in the AWS Systems Manager's Parameter Store for the region. After maintenance, set it back to false.
 
 == Resources
 * http://cs.co/ise-resources[{partner-product-short-name} & NAC Resources^]

@@ -8,6 +8,7 @@
 :partner-contributors: Sudhanshu Sharma, Venkatesh Sivakumar, Divya Anand, Hsing-Tsu Lai, Prashanth R, Hosuk Won (Cisco Systems, Inc.)
 // :other-contributors: Akua Mansa, Trek10
 :aws-contributors: Muffadal Quettawala, AWS Partner team
-:deployment_time: 5 to 60 minutes
+:deployment_time: 60 to 90 minutes
 :default_deployment_region: us-east-1
+:marketplace_listing_url: https://aws.amazon.com/marketplace/pp/prodview-uvsybra7r3iug
 // :private_repo:

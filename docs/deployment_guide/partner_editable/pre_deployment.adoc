@@ -4,7 +4,7 @@
 
 === Prepare your AWS account
 ==== AWS Marketplace
-* Subscribe to {marketplace_listing_url}[{marketplace_subscription} in AWS Marketplace^].
+* Subscribe to {marketplace_listing_url}[{partner-product-name} in AWS Marketplace^].
 
 ==== Service Quotas
 You might need to request service quotas increases if your existing workloads use these resources and if this Quick Start deployment could result in exceeding your current quotas. The https://console.aws.amazon.com/servicequotas/home[Service Quotas console^] displays your usage and quotas for some aspects of some services. If necessary, request service quota increases for the following resources in the Region where you plan to deploy {partner-product-short-name}.
@@ -17,15 +17,23 @@ For more information, see https://docs.aws.amazon.com/servicequotas/latest/userg
 |Resource |This deployment uses
 
 // Space needed to maintain table headers
+|AWS Identity and Access Management (IAM) roles | 14
+|AWS Identity and Access Management (IAM) Policies | 1
 |VPCs | 1
 |Elastic IP addresses | 2
-|Security groups | 1
-|AWS Identity and Access Management (IAM) roles | 1
-|EC2 instances | 2
-|AWS Lambda functions | 1
-|AWS Secrets Manager secrets| 1
-|CloudWatch event rules| 1
+|Security groups | 2
+|Route 53 Hosted zones | 2
 |EC2 key pairs | 1
+|Elastic Network Load Balancer | 1
+|AWS CloudFormation Stacks | 2 or 4
+|EC2 Launch Template | 1
+|EC2 instances | 2
+|AWS Lambda functions | 13
+|AWS Systems Manager Parameter Store Parameters | 8
+|AWS Step Functions Registered State Machines | 2
+|Amazon EventBridge Rules | 2
+|Amazon SNS Topics | 1
+|Amazon SNS Subscriptions | 1
 
 |===
 
