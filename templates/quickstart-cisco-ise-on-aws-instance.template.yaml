@@ -1081,7 +1081,7 @@ Resources:
                 - lambda:DeleteLayerVersion
                 Effect: Allow
                 Resource:
-                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:layer:*
+                  - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:layer:*
           PolicyName: lambda
 
   PipLayerLambda:
