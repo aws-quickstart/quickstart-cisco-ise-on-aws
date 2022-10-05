@@ -5,7 +5,7 @@ Description: >-
   into a new VPC with a Multi-AZ redundant configuration.
   See the Quick Start documentation for more details. **WARNING** You will
   be billed for the On-Demand instances and related AWS resources if you
-  create a stack from this template (qs-1sp7ritjm).
+  create a stack from this template (qs-1tfq7mgcj).
 Metadata:
   LintSpellExclude:
     - openapi
@@ -19,6 +19,9 @@ Metadata:
     - mykeypair
     - hostname
     - failover
+    - events
+    - state
+    - machine
     - console
     - plaintext
     - Management
@@ -37,10 +40,12 @@ Metadata:
           default: VPC network configuration
         Parameters:
           - VPCCIDR
-          #- PublicSubnet1CIDR
-          #- PublicSubnet2CIDR
+          - PublicSubnet1CIDR
+          - PublicSubnet2CIDR
           - PrivateSubnet1CIDR
           - PrivateSubnet2CIDR
+          - LBPrivateAddressSubnet1
+          - LBPrivateAddressSubnet2
       - Label:
           default: AWS Quick Start configuration
         Parameters:
@@ -57,6 +62,9 @@ Metadata:
           - ISEInstanceType
           - EBSEncrypt
           - StorageSize
+          - FailoverRate
+          - AutoFailover
+          - HealthcheckRate
       - Label:
           default: ISE network configuration
         Parameters:
@@ -77,14 +85,24 @@ Metadata:
     ParameterLabels:
       VPCCIDR:
         default: VPC CIDR
-      #PublicSubnet1CIDR:
-      #  default: Public subnet 1 CIDR for network load balancer
-      #PublicSubnet2CIDR:
-      #  default: Public subnet 2 CIDR for network load balancer
+      PublicSubnet1CIDR:
+        default: Public subnet 1 CIDR for network load balancer
+      PublicSubnet2CIDR:
+        default: Public subnet 2 CIDR for network load balancer
       PrivateSubnet1CIDR:
         default: Private subnet 1 CIDR for ISE VM
       PrivateSubnet2CIDR:
         default: Private subnet 2 CIDR for ISE VM
+      LBPrivateAddressSubnet1:
+        default: Private subnet 1 load balancer IP address
+      LBPrivateAddressSubnet2:
+        default: Private subnet 2 load balancer IP address
+      FailoverRate:
+        default: Failover rate
+      AutoFailover:
+        default: Auto failover
+      HealthcheckRate:
+        default: Health check rate
       QSS3BucketName:
         default: Quick Start S3 bucket name
       QSS3BucketRegion:
@@ -124,28 +142,28 @@ Metadata:
 Parameters:
   PrivateSubnet1CIDR:
     AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
-    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/17-28
     Default: 10.0.0.0/19
     Description: CIDR block for private subnet 1 located in Availability Zone 1.
     Type: String
   PrivateSubnet2CIDR:
     AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
-    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/17-28
     Default: 10.0.32.0/19
     Description: CIDR block for private subnet 2 located in Availability Zone 2.
     Type: String
-  #PublicSubnet1CIDR:
-  #  AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
-  #  ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
-  #  Default: 10.0.128.0/20
-  #  Description: CIDR block for the public (DMZ) subnet 1 located in Availability Zone 1.
-  #  Type: String
-  #PublicSubnet2CIDR:
-  #  AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
-  #  ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
-  #  Default: 10.0.144.0/20
-  #  Description: CIDR block for the public (DMZ) subnet 2 located in Availability Zone 2.
-  #  Type: String
+  PublicSubnet1CIDR:
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/17-28
+    Default: 10.0.128.0/20
+    Description: CIDR block for the public (DMZ) subnet 1 located in Availability Zone 1.
+    Type: String
+  PublicSubnet2CIDR:
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/17-28
+    Default: 10.0.144.0/20
+    Description: CIDR block for the public (DMZ) subnet 2 located in Availability Zone 2.
+    Type: String
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
     ConstraintDescription: 'Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-).'
@@ -164,9 +182,21 @@ Parameters:
     Type: String
   VPCCIDR:
     AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
-    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-26
     Default: 10.0.0.0/16
     Description: CIDR block for the VPC.
+    Type: String
+  LBPrivateAddressSubnet1:
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])'
+    ConstraintDescription: IP address parameter must be in the form x.x.x.x
+    Default: 10.0.0.4
+    Description: Private IP address of load balancer for private subnet 1.
+    Type: String
+  LBPrivateAddressSubnet2:
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])'
+    ConstraintDescription: IP address parameter must be in the form x.x.x.x
+    Default: 10.0.32.4
+    Description: Private IP address of load balancer for private subnet 2.
     Type: String
   KeyPairName:
     Description: >-
@@ -250,6 +280,34 @@ Parameters:
     ConstraintDescription: >-
       This field only supports alphanumeric characters and hyphen (-). Hostname
       should not be more than 19 characters.
+  FailoverRate:
+    Description:
+      The rate (frequency) that determines when CloudWatch Events runs the rule
+      that triggers the Lambda function which triggers Failover State Machine.
+    Default: rate(60 minutes)
+    AllowedValues:
+      - rate(1 minute)
+      - rate(10 minutes)
+      - rate(60 minutes)
+    Type: String
+  HealthcheckRate:
+    Description:
+      The rate (frequency) that determines when CloudWatch Events runs the rule
+      that triggers the Lambda function which checks health status of ISE deployment.
+    Default: rate(10 minutes)
+    AllowedValues:
+      - rate(1 minute)
+      - rate(10 minutes)
+      - rate(60 minutes)
+    Type: String
+  AutoFailover:
+    Description: Choose ENABLED to enable auto-failover mechanism.
+    Type: String
+    Default: 'DISABLED'
+    AllowedValues:
+      - 'ENABLED'
+      - 'DISABLED'
+    ConstraintDescription: It can either be ENABLED or DISABLED
   DNSDomain:
     Description: >-
       Enter a domain name in correct syntax (for example, cisco.com). The valid
@@ -712,8 +770,8 @@ Resources:
         NumberOfAZs: '2'
         PrivateSubnet1ACIDR: !Ref PrivateSubnet1CIDR
         PrivateSubnet2ACIDR: !Ref PrivateSubnet2CIDR
-        #PublicSubnet1CIDR: !Ref PublicSubnet1CIDR
-        #PublicSubnet2CIDR: !Ref PublicSubnet2CIDR
+        PublicSubnet1CIDR: !Ref PublicSubnet1CIDR
+        PublicSubnet2CIDR: !Ref PublicSubnet2CIDR
         VPCCIDR: !Ref VPCCIDR
   WorkloadStack:
     Type: AWS::CloudFormation::Stack
@@ -735,8 +793,6 @@ Resources:
           Fn::GetAtt:
           - VPCStack
           - Outputs.PrivateSubnet2AID
-        PrivateSubnet1CIDR: !Ref PrivateSubnet1CIDR
-        PrivateSubnet2CIDR: !Ref PrivateSubnet2CIDR
         TimeZone: !Ref TimeZone
         ISEInstanceType: !Ref ISEInstanceType
         EBSEncrypt: !Ref EBSEncrypt
@@ -749,6 +805,11 @@ Resources:
         password: !Ref password
         ConfirmPwd: !Ref ConfirmPwd
         EmailSubscription: !Ref EmailSubscription
+        AutoFailover: !Ref AutoFailover
+        FailoverRate: !Ref FailoverRate
+        HealthcheckRate: !Ref HealthcheckRate
+        LBPrivateAddressSubnet1: !Ref LBPrivateAddressSubnet1
+        LBPrivateAddressSubnet2: !Ref LBPrivateAddressSubnet2
         QSS3BucketName:
           Ref: QSS3BucketName
         QSS3BucketRegion: !Ref QSS3BucketRegion
