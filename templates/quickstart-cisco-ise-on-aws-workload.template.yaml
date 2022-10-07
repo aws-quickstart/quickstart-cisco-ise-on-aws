@@ -759,8 +759,6 @@ Resources:
         KeyPairName: !Ref KeyPairName
         PrivateSubnet1A: !Ref ManagementSubnet1Id
         PrivateSubnet1B: !Ref ManagementSubnet2Id
-        # PrivateSubnet1CIDR: !Ref PrivateSubnet1CIDR
-        # PrivateSubnet2CIDR: !Ref PrivateSubnet2CIDR
         EBSEncrypt: !Ref EBSEncrypt
         StorageSize: !Ref StorageSize
         TimeZone: !Ref TimeZone
