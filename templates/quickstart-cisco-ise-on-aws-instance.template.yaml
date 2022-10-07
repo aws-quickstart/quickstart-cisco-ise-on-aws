@@ -657,7 +657,7 @@ Mappings:
       BYOL32: ami-0707cee299c018554
     eu-south-1:
       BYOL31: ami-0941a499217ec268e
-      BYOL31: ami-0948f9e67d0ddac78
+      BYOL32: ami-0948f9e67d0ddac78
     ap-southeast-1:
       BYOL31: ami-0214a475ff692424f
       BYOL32: ami-0a89fe984bc7a1e0c
