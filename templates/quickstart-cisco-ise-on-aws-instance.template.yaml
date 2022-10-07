@@ -610,13 +610,13 @@ Parameters:
   LBPrivateAddressSubnet1:
     AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])'
     ConstraintDescription: IP Address parameter must be in the form x.x.x.x
-    Default: 10.0.0.4
+    #Default: 10.0.0.4
     Description: Private IP Address of Load Balancer for Private Subnet-1
     Type: String
   LBPrivateAddressSubnet2:
     AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])'
     ConstraintDescription: IP Address parameter must be in the form x.x.x.x
-    Default: 10.0.32.4
+    #Default: 10.0.32.4
     Description: Private IP Address of Load Balancer for Private Subnet-2
     Type: String
   EmailSubscription:
