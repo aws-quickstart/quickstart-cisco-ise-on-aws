@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
-  This template creates a two-node Cisco ISE deployment in a two-AZ, two-subnet VPC infrastructure with AWS NLB, health monitoring, and optionally automated PAN failover.
+  This template creates a two-node Cisco ISE deployment in a two-AZ, two-subnet VPC infrastructure with AWS NLB, health monitoring, and optionally automated PAN failover. (qs-1tfq7mg9i)
 Metadata:
   LintSpellExclude:
     - openapi
@@ -1063,13 +1063,13 @@ Resources:
                 - logs:PutLogEvents
                 Effect: Allow
                 Resource:
-                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/PipLayer-ISE-Lambda:*
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/PipLayer-ISE-Lambda:*
               - Action:
                 - lambda:PublishLayerVersion
                 - lambda:DeleteLayerVersion
                 Effect: Allow
                 Resource:
-                  - "*"
+                  - !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:layer:*
           PolicyName: lambda
 
   PipLayerLambda:
