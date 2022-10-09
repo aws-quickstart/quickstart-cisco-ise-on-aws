@@ -15,16 +15,16 @@ As shown in <<architecture1>>, this Quick Start sets up the following:
 * A highly available architecture that spans two Availability Zones.
 * A virtual private cloud (VPC)* configured with public and private subnets, according to AWS
 best practices, to provide you with your own virtual network on AWS.
-** In public subnets, this Quick Start deploys:
+** In public subnets,
 *** Managed network address translation (NAT) gateways to allow outbound internet access for resources in the private subnets.
-** In private subnets, this Quick Start provisions:
+** In private subnets,
 *** Single {partner-product-short-name} instance for each subnet, and
 *** AWS Network Load Balacer listener to distribute RADIUS and TACACS+ requests between the two {partner-product-short-name} instances.
 
 // Add bullet points for any additional components that are included in the deployment. Ensure that the additional components are shown in the architecture diagram. End each bullet with a period.
 
 * AWS Route53 for DNS resolution between the two {partner-product-short-name} instances.
-* AWS Lambda functions, Amazon Step Functions State Machines, AWS Systems Manager (SSM) Parameter Store, Amazon CloudWatch, Amazon EventBridge rules, and Amazon Simple Notification Service (SNS) are used together
+* AWS Lambda functions, Amazon Step Functions State Machines, AWS Systems Manager (SSM) Parameter Store, Amazon CloudWatch, Amazon EventBridge rules, and Amazon Simple Notification Service (SNS)
 ** to form a two-node (Small) {partner-product-short-name} deployment,
 ** to perform health check on the {partner-product-short-name} deployment, and
 ** to monitor the {partner-product-short-name} instances and to automate Policy Administration Node (PAN) fail over.
