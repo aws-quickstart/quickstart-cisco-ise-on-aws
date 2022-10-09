@@ -24,16 +24,180 @@ For more information, see https://docs.aws.amazon.com/AWSCloudFormation/latest/U
 
 *A.* Launch the Quick Start templates from the links in this guide or from another S3 bucket. If you deploy the templates from a local copy on your computer or from a location other than an S3 bucket, you might encounter template-size limitations. For more information, see http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-limits.html[AWS CloudFormation quotas^].
 
-*Q.* I encountered a CREATE_FAILED on DeploymentWaitCondition with WaitCondition timed out. Received 0 conditions when expecting 1 when I deployed the AWS CloudFormation templates for ISE workloads and ISE instance.
+*Q.* I encountered a *CREATE_FAILED* error on *DeploymentWaitCondition* with [.underline]#WaitCondition timed out. Received 0 conditions when expecting 1# after Rollback on failure set to Disabled.
 
-*A.* Go to Step Functions > State machines > DeploymentStateMachine-xxxxxxxxxxxx, drill into the last execution, and look for the failed event(s) in the events table. Please verify the DNS attributes of your VPC and ensure it enabled for both https://docs.aws.amazon.com/vpc/latest/userguide/vpc-dns.html#vpc-dns-support[DNS attributes (enableDnsHostnames and enableDnsSupport) in the VPC^] if it fails in step: If ISE is up and running
+[#DeploymentWaitCondition-timeout]
+.CREATE_FAILED due to DeploymentWaitCondition timed out for {partner-product-short-name} on AWS
+image::../docs/deployment_guide/images/DeploymentWaitCondition-timeout.png[DeploymentWaitCondition-timeout]
 
-    An error occurred while executing the state 'If ISE is up and running' (entered at the event id #11). Invalid path '$.taskresult.IseState': The choice state's condition path references an invalid value.
-    Check ISE status
-    Exception: [Errno -2] Name or service not known
-    Traceback (most recent call last):
-    File "/var/task/index.py", line 52, in handler
-        isenode01_ip = socket.gethostbyname_ex(PPAN_fqdn)[2][-1]
-    socket.gaierror: [Errno -2] Name or service not known
+*A.* Go to *Step Functions* > *State machines* > *DeploymentStateMachine*-xxxxxxxxxxxx, drill into the _Failed_ execution, and look for the #Failed# event(s). Click on the *Logs* hyperlink to the CloudWatch log groups and then drill into the log stream whose last event time around the time of the failed event.
 
+[#DeploymentStateMachine-Failed-A]
+.State Machines lists *Deployment State Machine* with 1 Failed.
+image::../docs/deployment_guide/images/DeploymentStateMachine-Failed-0.png[DeploymentStateMachine-Failed-A]
+
+[#DeploymentStateMachine-Failed-B]
+.Deployment State Machine *Executions* lists 1 Failed.
+image::../docs/deployment_guide/images/DeploymentStateMachine-Failed-B.png[DeploymentStateMachine-Failed-B]
+
+== Sample CloudWatch Events
+
+Below shows two sample failures; one at the _Step_ *Check ISE status* and the other at the _Choice_ *If ISE is up and running*. Both are due to VPC network requirements are not met. So, please verify the requirements:
+
+* The DNS attributes of the VPC: Ensure both https://docs.aws.amazon.com/vpc/latest/userguide/vpc-dns.html#vpc-dns-support[DNS attributes (enableDnsHostnames and enableDnsSupport) in the VPC^] are enabled.
+* Access to AWS services: The VPC private subnets requires Internet access or endpoints to reach AWS services, such as SSM and SNS.
+
+We also show samples of expected successful log events.
+
+=== Failed on *Check ISE status*
+This example shows it failed on the _step_ Check ISE status.
+
+[#DeploymentStateMachine-Failed-C]
+.Deployment State Machine Failed (+C+) on *Check ISE status*
+image::../docs/deployment_guide/images/DeploymentStateMachine-Failed-C-CheckISEstatus.png[DeploymentStateMachine-Failed-C-CheckISEstatus]
+
+[#DeploymentStateMachine-Failed-D]
+.Deployment State Machine Failed (D) on *Check ISE status* *[CloudWatch Log groups and streams]*
+image::../docs/deployment_guide/images/DeploymentStateMachine-Failed-D-Log-0.png[DeploymentStateMachine-Failed-D-Log-0]
+
+[#DeploymentStateMachine-Failed-E]
+.Deployment State Machine Failed (E) on *Check ISE status* *[CloudWatch Log events]*
+image::../docs/deployment_guide/images/DeploymentStateMachine-Failed-E-Log-1.png[DeploymentStateMachine-Failed-E-Log-1]
+
+[source.small,python]
+----
+START RequestId: 5072dcc5-01ed-47dc-9913-4298bdf12274 Version: $LATEST
+[INFO]	2022-10-09T00:04:43.390Z	5072dcc5-01ed-47dc-9913-4298bdf12274	Found credentials in environment variables.
+END RequestId: 5072dcc5-01ed-47dc-9913-4298bdf12274
+REPORT RequestId: 5072dcc5-01ed-47dc-9913-4298bdf12274	Duration: 300003.32 ms	Billed Duration: 300000 ms	Memory Size: 128 MB	Max Memory Used: 71 MB	Init Duration: 291.96 ms
+2022-10-09T00:09:43.235Z 5072dcc5-01ed-47dc-9913-4298bdf12274 Task timed out after 300.00 seconds
+----
+
+=== Failed on *If ISE is up and running*
+
+This example shows it failed on the _choice_ If ISE is up and running. This choice is right after the _step_ Check ISE status and it failed because of an exception not caught in _Check ISE status_.
+
+[#DeploymentStateMachine-Failed-C-ifISEisUpAndRunning]
+.Deployment State Machine Failed (+C+) on *If ISE is up and running - Choice*
+image::../docs/deployment_guide/images/DeploymentStateMachine-Failed-C-ifISEisUpAndRunning.png[DeploymentStateMachine-Failed-C-ifISEisUpAndRunning]
+
+[#DeploymentStateMachine-Failed-E-Log]
+.Deployment State Machine Failed (+E+) on *If ISE is up and running - Choice* *[CloudWatch Log events]*
+image::../docs/deployment_guide/images/DeploymentStateMachine-Failed-E-Log.png[DeploymentStateMachine-Failed-E-Log]
+
+[source.small,python]
+----
+START RequestId: b24c1fd7-a223-4c00-951b-c36e5b599d6a Version: $LATEST
+[INFO]	2022-10-09T01:41:00.631Z	b24c1fd7-a223-4c00-951b-c36e5b599d6a	Found credentials in environment variables.
+[ERROR]	2022-10-09T01:41:01.968Z	b24c1fd7-a223-4c00-951b-c36e5b599d6a	Exception: [Errno -2] Name or service not known
+Traceback (most recent call last):
+  File "/var/task/index.py", line 52, in handler
+    isenode01_ip = socket.gethostbyname_ex(PPAN_fqdn)[2][-1]
+socket.gaierror: [Errno -2] Name or service not known
+END RequestId: b24c1fd7-a223-4c00-951b-c36e5b599d6a
+REPORT RequestId: b24c1fd7-a223-4c00-951b-c36e5b599d6a	Duration: 1505.93 ms	Billed Duration: 1506 ms	Memory Size: 128 MB	Max Memory Used: 73 MB	Init Duration: 366.57 ms
+----
+
+
+=== Success on *Check ISE status* and *If ISE is up and running*
+This example shows two expected log samples when the step _Check ISE status_ ran without errors and the choice _If ISE is up and running_ was evaluated successfully.
+
+* When the first node is not ready yet
+
+[source.small,python]
+----
+START RequestId: 1927bbcc-dd60-48b6-97cc-d2ca936a2114 Version: $LATEST
+[INFO]	2022-10-09T03:44:08.459Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	Found credentials in environment variables.
+[INFO]	2022-10-09T03:44:09.817Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	Installed ISE Instance IPs are:
+ PPAN - 10.7.1.138 , SPAN - 10.7.2.243
+[INFO]	2022-10-09T03:44:09.817Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	#Setting SSM parameters...
+[INFO]	2022-10-09T03:44:09.973Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	#Retriving SSM parameters...
+[INFO]	2022-10-09T03:44:10.148Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	Primmary Polcy Administration node ip : 10.7.1.138
+[INFO]	2022-10-09T03:44:10.148Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	Secondary Polcy Administration node ip : 10.7.2.243
+[INFO]	2022-10-09T03:44:10.148Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	ADMIN_USERNAME : iseadmin
+[INFO]	2022-10-09T03:44:10.148Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	API_HEADER : {'Content-Type': 'application/json', 'Accept': 'application/json'}
+[INFO]	2022-10-09T03:44:10.148Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	Secondary Polcy Administration node fqdn : ise-aws2.oh-demo.local
+/opt/python/urllib3/connectionpool.py:1045: InsecureRequestWarning: Unverified HTTPS request is being made to host '10.7.1.138'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/1.26.x/advanced-usage.html#ssl-warnings
+warnings.warn(
+[INFO]	2022-10-09T03:44:10.439Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	API response for 10.7.1.138 is 
+{
+    "message": "An invalid response was received from the server",
+    "code": 502
+}
+
+ 
+/opt/python/urllib3/connectionpool.py:1045: InsecureRequestWarning: Unverified HTTPS request is being made to host '10.7.2.243'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/1.26.x/advanced-usage.html#ssl-warnings
+warnings.warn(
+[INFO]	2022-10-09T03:44:10.721Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	API response for 10.7.2.243 is 
+{
+    "message": "An invalid response was received from the server",
+    "code": 502
+}
+
+ 
+END RequestId: 1927bbcc-dd60-48b6-97cc-d2ca936a2114
+REPORT RequestId: 1927bbcc-dd60-48b6-97cc-d2ca936a2114	Duration: 2467.90 ms	Billed Duration: 2468 ms	Memory Size: 128 MB	Max Memory Used: 75 MB	Init Duration: 406.60 ms
+----
+
+
+* When both nodes are up
+
+[source.small,python]
+----
+START RequestId: 97c70b95-8234-4af9-bd98-c605e6123ae1 Version: $LATEST
+[INFO]	2022-10-09T03:56:15.261Z	97c70b95-8234-4af9-bd98-c605e6123ae1	#Retriving SSM parameters...
+[INFO]	2022-10-09T03:56:15.596Z	97c70b95-8234-4af9-bd98-c605e6123ae1	Primmary Polcy Administration node ip : 10.7.1.138
+[INFO]	2022-10-09T03:56:15.597Z	97c70b95-8234-4af9-bd98-c605e6123ae1	Secondary Polcy Administration node ip : 10.7.2.243
+[INFO]	2022-10-09T03:56:15.597Z	97c70b95-8234-4af9-bd98-c605e6123ae1	ADMIN_USERNAME : iseadmin
+[INFO]	2022-10-09T03:56:15.597Z	97c70b95-8234-4af9-bd98-c605e6123ae1	API_HEADER : {'Content-Type': 'application/json', 'Accept': 'application/json'}
+[INFO]	2022-10-09T03:56:15.597Z	97c70b95-8234-4af9-bd98-c605e6123ae1	Secondary Polcy Administration node fqdn : ise-aws2.oh-demo.local
+/opt/python/urllib3/connectionpool.py:1045: InsecureRequestWarning: Unverified HTTPS request is being made to host '10.7.1.138'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/1.26.x/advanced-usage.html#ssl-warnings
+warnings.warn(
+[INFO]	2022-10-09T03:56:15.929Z	97c70b95-8234-4af9-bd98-c605e6123ae1	API response for 10.7.1.138 is 
+{
+    "response": [
+        {
+            "hostname": "ise-aws1",
+            "fqdn": "ise-aws1.oh-demo.local",
+            "ipAddress": "10.7.1.138",
+            "roles": [
+                "Standalone"
+            ],
+            "services": [
+                "Profiler",
+                "Session"
+            ],
+            "nodeStatus": "Connected"
+        }
+    ],
+    "version": "1.0.0"
+}
+ 
+[INFO]	2022-10-09T03:56:15.930Z	97c70b95-8234-4af9-bd98-c605e6123ae1	ISE - 10.7.1.138 is up and running
+/opt/python/urllib3/connectionpool.py:1045: InsecureRequestWarning: Unverified HTTPS request is being made to host '10.7.2.243'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/1.26.x/advanced-usage.html#ssl-warnings
+warnings.warn(
+[INFO]	2022-10-09T03:56:17.101Z	97c70b95-8234-4af9-bd98-c605e6123ae1	API response for 10.7.2.243 is 
+{
+    "response": [
+        {
+            "hostname": "ise-aws2",
+            "fqdn": "ise-aws2.oh-demo.local",
+            "ipAddress": "10.7.2.243",
+            "roles": [
+                "Standalone"
+            ],
+            "services": [
+                "Profiler",
+                "Session"
+            ],
+            "nodeStatus": "Connected"
+        }
+    ],
+    "version": "1.0.0"
+}
+ 
+[INFO]	2022-10-09T03:56:17.101Z	97c70b95-8234-4af9-bd98-c605e6123ae1	ISE - 10.7.2.243 is up and running
+END RequestId: 97c70b95-8234-4af9-bd98-c605e6123ae1
+REPORT RequestId: 97c70b95-8234-4af9-bd98-c605e6123ae1	Duration: 1942.49 ms	Billed Duration: 1943 ms	Memory Size: 128 MB	Max Memory Used: 77 MB
+----
 

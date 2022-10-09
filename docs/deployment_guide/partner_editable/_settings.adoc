@@ -3,7 +3,7 @@
 :partner-product-name: Cisco Identity Services Engine
 :partner-product-short-name: Cisco ISE
 :partner-company-name: Cisco Systems Inc.
-:doc-month: April
+:doc-month: October
 :doc-year: 2022
 :partner-contributors: Sudhanshu Sharma, Venkatesh Sivakumar, Divya Anand, Hsing-Tsu Lai, Prashanth R, Hosuk Won, {partner-company-name}
 // :other-contributors: Akua Mansa, Trek10

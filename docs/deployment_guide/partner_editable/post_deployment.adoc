@@ -3,17 +3,35 @@
 == Postdeployment steps
 After deployment, you must do the following:
 
-* Attach the workload VPCs to the on-premise network via https://docs.aws.amazon.com/vpn/latest/s2svpn/index.html[AWS Site-to-Site VPN^] or the like.
-* Update the VPC route tables for the workload subnets. For more information, see https://docs.aws.amazon.com/vpc/latest/userguide/WorkWithRouteTables.html#AddRemoveRoutes[Add and remove routes from a route table^].
-* Put the deployment in maintenance by updating the parameter Maintenance to True.
-* Change the password of the user "admin" both in ISE admin web UI and ISE admin CLI. Update Password Lifetime. See https://www.cisco.com/c/en/us/td/docs/security/ise/3-1/admin_guide/b_ise_admin_3_1/b_ISE_admin_31_overview.html#concept_7642DD36C0DD424CA423615BF013D0B9[Administrative Access to Cisco ISE^].
-* Optionally, for API access, create a new ISE admin user in the admin group "ERS Admin".
-* Update the parameter ADMIN_PASSWORD in the AWS System Manager parameter store. If using the new ISE admin user created for API access, update both the parameters ADMIN_USERNAME and ADMIN_PASSWORD.
-* Enable API Gateway on the secondary ISE node. For more information, see https://developer.cisco.com/docs/identity-services-engine/latest/#!cisco-ise-api-framework/cisco-ise-api-gateway[Cisco ISE API Gateway^].
-* Install the latest patch of ISE 3.1. See https://www.cisco.com/c/en/us/td/docs/security/ise/3-1/release_notes/b_ise_31_RN.html#id_82860[Release Notes for Cisco Identity Services Engine, Release 3.1 > Install a New Patch^].
-* https://www.cisco.com/c/en/us/td/docs/security/ise/3-1/admin_guide/b_ise_admin_3_1/b_ISE_admin_31_basic_setup.html#task_E04823B79DCD41EABFAD358D882CE7CA[Export Cisco ISE CA Certificates and Keys^] from the primary ISE node. Then, https://www.cisco.com/c/en/us/td/docs/security/ise/3-1/admin_guide/b_ise_admin_3_1/b_ISE_admin_31_basic_setup.html#task_574F728D24F84475A6099F0D9D3B76B1[Import Cisco ISE CA Certificates and Keys^] into the secondary ISE node. 
-* End the maintenance by update the parameter Maintenance to False.
-* Later before performing any maintenance, set the parameter Maintenance to true in the AWS Systems Manager's Parameter Store for the region. After maintenance, set it back to false.
+. Enter Maintenance mode: In order to avoid false alarms and accidentally trigger PAN failover, put the deployment in maintenance by updating the parameter *Maintenance* to `ENABLED`.
+.. Open the https://console.aws.amazon.com/systems-manager/[AWS Systems Manager (SSM) console^].
+.. Select the AWS region where the quick start is created.
+.. In the navigation pane, choose *Parameter Store*. If the AWS Systems Manager home page opens first, choose the menu icon to open the navigation pane, and then choose Parameter Store.
+.. Select the parameter *Maintenance* to drill into its properties.
+.. Click on the *Edit* button in the upper right corner of the page.
+.. In the Value text box, replace the exiting text with `ENABLED`.
+.. Click on the *Save changes* button.
+
+. Update *ADMIN_PASSWORD*:
+AWS CloudFormation does not support the ability to store SSM parameters as securestring and, starting from Release 3.2, {partner-product-short-name} requires to reset the admin password after the initial setup. Consequently, you must reset the default admin user's password from the {partner-product-short-name} administrative web console and then manually update the SSM admin password parameter via the AWS cli or console.
+.. Change the password of the {partner-product-short-name} admin user in {partner-product-short-name} adminstrative web console. For detailed instructions, see https://www.cisco.com/c/en/us/td/docs/security/ise/3-2/admin_guide/b_ise_admin_3_2/b_ISE_admin_32_overview.html#concept_7642DD36C0DD424CA423615BF013D0B9[Administrative Access to {partner-product-short-name}^].
++
+NOTE: For AWS deployments, the initial {partner-product-short-name} admin user name is `admin` in {partner-product-short-name} 3.1 and `iseadmin` in {partner-product-short-name} 3.2.
++
+.. Update the value of the *ADMIN_PASSWORD* parameter to the new password in the Parameter Store, following the same instructions for the _Maintenance_ parameter.
++
+TIP: To conform the principle of least privilege, you may create a new {partner-product-short-name} admin user in {partner-product-short-name} administrative web console, assign it to the admin group *ERS_ADMIN*, and replace the values of the SSM parameters *ADMIN_USERNAME* and *ADMIN_PASSWORD* with this new admin user's data.
++
+. Enable API Gateway for the secondary ISE node: We need this in order to use Lambda to promote SPAN to primary while PPAN is down. For the detailed instructions, see https://developer.cisco.com/docs/identity-services-engine/latest/#!cisco-ise-api-framework/cisco-ise-api-gateway[{partner-product-short-name} API Gateway^].
+. Install the latest patch of the ISE release: In order to get the latest fixes, please update the nodes with the latest patch release. For detailed instructions, see the section Install a New Patch in the corresponding http://cs.co/ise-rn[Release Notes for Cisco Identity Services Engine^].
+. Backup {partner-product-short-name} internal CA chains: This step prepares SPAN to take over PPAN to issue and manage certificates in case that SPAN promoted to primary. https://www.cisco.com/c/en/us/td/docs/security/ise/3-1/admin_guide/b_ise_admin_3_1/b_ISE_admin_31_basic_setup.html#task_E04823B79DCD41EABFAD358D882CE7CA[Export {partner-product-short-name} CA Certificates and Keys^] from the primary ISE node. Then, https://www.cisco.com/c/en/us/td/docs/security/ise/3-1/admin_guide/b_ise_admin_3_1/b_ISE_admin_31_basic_setup.html#task_574F728D24F84475A6099F0D9D3B76B1[Import {partner-product-short-name} CA Certificates and Keys^] into the secondary ISE node.
+. End Maintenance mode: Update the parameter *Maintenance* to `DISABLED`.
+
+.Maintenance
+****
+NOTE: In the future, set the parameter *Maintenance* to `ENABLED` in the AWS Systems Manager's Parameter Store for the region before performing any maintenance. Set it back to `DISABLED` after maintenance.
+****
+
 
 == Resources
 * http://cs.co/ise-resources[{partner-product-short-name} & NAC Resources^]

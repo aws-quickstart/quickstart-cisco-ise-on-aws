@@ -2,4 +2,4 @@
 
 There is no cost to use this Quick Start, but you will be billed for any AWS services or resources that this Quick Start deploys. For more information, refer to the https://fwd.aws/rA69w?[AWS Quick Start General Information Guide^].
 
-This Quick Start comes with 90 days evaluation license for Cisco ISE. To use ISE for more than 90 days, you must purchase VM license for each ISE instances and endpoint licenses depending on the feature level that is required for intended number of endpoints. For more information, see https://www.cisco.com/c/en/us/products/collateral/security/identity-services-engine/guide-c07-656177.html[Cisco ISE Ordering Guide].
+This Quick Start comes with a 90-day evaluation license for {partner-product-short-name}. To use {partner-product-short-name} for more than 90 days, you must purchase a VM license for each {partner-product-short-name} instance and endpoint licenses depending on the feature level that is required for intended number of endpoints. For more information, see https://www.cisco.com/c/en/us/products/collateral/security/identity-services-engine/guide-c07-656177.html[{partner-product-short-name} Ordering Guide^].

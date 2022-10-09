@@ -4,4 +4,4 @@ This Quick Start deploys {partner-product-name} on the AWS Cloud. If you are unf
 
 // For information about using this Quick Start for migrations, refer to the https://{quickstart-github-org}.github.io/{quickstart-project-name}/migration/index.html[Migration Guide^].
 
-This Quick Start is for those who wants to deploy Cisco ISE leveraging AWS services. It can be used to deploy single ISE node, or two ISE nodes to provide redundancy. For redundant ISE deployment, the Quick Start will form the two nodes utilizing some native AWS services as well as ISE APIs.
+This Quick Start is for anyone who wants to deploy {partner-product-short-name} leveraging AWS services. It can be used to deploy two {partner-product-short-name} nodes. For high availability, the Quick Start will form a {partner-product-short-name} deployment with the two nodes utilizing native AWS services as well as {partner-product-short-name} APIs.
