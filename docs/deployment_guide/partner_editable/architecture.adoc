@@ -38,9 +38,9 @@ image::../docs/deployment_guide/images/quickstart-cisco-ise-on-aws-architecture-
 
 As shown in <<architecture2>>, this Quick Start Deployment State Machine performs the following steps to form a two-node {partner-product-short-name} deployment:
 
-. Check {partner-product-short-name} status: _Verify both the primary {partner-product-short-name} admin node (primary PAN or PPAN) and the secondary {partner-product-short-name} admin node (secondary PAN or SPAN) are up._
-. Set Primary PAN: _Make the first {partner-product-short-name} instance as PPAN of a new {partner-product-short-name} deployment._
-. Register Secondary Node: _Register the second {partner-product-short-name} instance as SPAN into the same {partner-product-short-name} deployment._
+. Check {partner-product-short-name} status: _Verify both {partner-product-short-name} instances are up and ready._
+. Set Primary PAN: _Make the first {partner-product-short-name} instance as the primary admin node (primary PAN or PPAN) of a new {partner-product-short-name} deployment._
+. Register Secondary Node: _Register the second {partner-product-short-name} instance as the secondary admin node (secondary PAN or SPAN) into the same {partner-product-short-name} deployment._
 . Check Sync Status: _Check the deployment status and verify that SPAN has synchronized to SPAN._
 
 NOTE: CloudFormation executes this Quick Start Deployment State Machine towards the end of the stack creation.
