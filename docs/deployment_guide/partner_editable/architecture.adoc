@@ -53,9 +53,9 @@ image::../docs/deployment_guide/images/quickstart-cisco-ise-on-aws-architecture-
 When PPAN fails, we need promote SPAN as primary to re-gain access to the Cisco administrative web console and to allow certain aspects of {partner-product-short-name} services to continue to work. As shown in <<architecture3>>, this Quick Start Failover State Machine performs the following steps to detect PPAN failures and to promote SPAN to primary:
 
 . Check PPAN Status: _Detect PPAN failures._
-. Check SPAN Getway Status: _Verify whether the API gateway on SPAN is not accessible._
+. Check SPAN Getway Status: _Verify whether the API gateway on SPAN is accessible._
 . Perform Failover: _Promote SPAN to PPAN._
-. Check Failover Successful: _Verify the PAN failover has completed and is successful._
+. Check Failover Successful: _Confirm the PAN failover has completed and is successful._
 
 .AutoFailover
 ****
