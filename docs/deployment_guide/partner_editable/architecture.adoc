@@ -63,7 +63,7 @@ NOTE: *AutoFailover* is an input parameter to the CloudFormation stacks. When `E
 ****
 
 === Parameter Store
-This Quick Start stores its configurable parameters in https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html[AWS Systems Manaager Parameter Store^]. The parameters are:
+This Quick Start stores its configurable parameters in https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html[AWS Systems Manager Parameter Store^]. The parameters are:
 
 [%autowidth]
 |===
