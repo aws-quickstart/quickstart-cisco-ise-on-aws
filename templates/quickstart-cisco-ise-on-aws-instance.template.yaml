@@ -30,10 +30,11 @@ Metadata:
 Parameters:
   KeyPairName:
     Description: >-
-      To access the Cisco ISE instance via SSH, choose the PEM file that you
-      created in AWS for the username "admin". Create a PEM key pair in AWS now
+      To access the Cisco ISE instance via SSH, choose the key pair that you
+      created/imported in AWS. Create/import a key pair in AWS now
       if you have not configured one already. Usage example:  ssh -i
-      mykeypair.pem admin@myhostname.compute-1.amazonaws.com
+      mykeypair.pem admin@myhostname.compute-1.amazonaws.com.
+      NOTE: The username for ISE 3.1 is "admin" and for ISE 3.2+ is "iseadmin".
     Type: 'AWS::EC2::KeyPair::KeyName'
     AllowedPattern: .+
     ConstraintDescription: Instance Key Pair cannot be empty
@@ -558,10 +559,11 @@ Parameters:
       - WET
   password:
     Description: >-
-      Enter a password for the username \"admin\".
-      The password must be aligned with the Cisco ISE password policy.
-      The configured password is used for Cisco ISE GUI access.
-      Warning: The password is displayed in plaintext in the User Data section of the Instance settings window in the AWS Console.
+      Enter a password for the default admin user. The password must be aligned
+      with the Cisco ISE password policy (must contain one or more lowercase, uppercase, numeric, and non-alphanumeric characters). The configured password is used for
+      Cisco ISE GUI access. Warning: the password is displayed in plaintext in
+      the user data section of the instance settings window in the AWS Management Console.
+      NOTE: The username for ISE 3.1 is "admin" and for ISE 3.2+ is "iseadmin".
     NoEcho: 'True'
     Type: String
     AllowedPattern: >-
