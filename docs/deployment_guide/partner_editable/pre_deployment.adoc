@@ -1,3 +1,7 @@
 //Include any predeployment steps here, such as signing up for a Marketplace AMI or making any changes to a partner account. If there are no predeployment steps, leave this file empty.
 
 == Predeployment steps
+
+=== AWS Marketplace
+Subscribe to {marketplace_listing_url}[{partner-product-name} in AWS Marketplace^].
+

@@ -1,3 +1,146 @@
 //Add any unique troubleshooting steps here.
 
 For troubleshooting common Quick Start issues, refer to the https://fwd.aws/rA69w?[AWS Quick Start General Information Guide^] and https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/troubleshooting.html[Troubleshooting CloudFormation^].
+
+Refer to the following resources for help with these subjects:
+
+* https://docs.aws.amazon.com/lambda/latest/dg/lambda-troubleshooting.html[Troubleshooting issues in Lambda^]
+* https://aws.amazon.com/premiumsupport/knowledge-center/ssm-troubleshoot-lambda-internet-access/[How do I troubleshoot internet access issues for an AWS Lambda function that's in an Amazon VPC using AWS Systems Manager?^]
+* https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-serial-console.html[EC2 Serial Console for Linux instances^]
+
+== FAQ
+
+*Q.* I encountered a *CREATE_FAILED* error when I launched the Quick Start.
+
+*A.* If AWS CloudFormation fails to create the stack, relaunch the template with *Rollback on failure* set to *Disabled*. This setting is under *Advanced* in the AWS CloudFormation console on the *Configure stack options* page. With this setting, the stack’s state is retained, and the instance keeps running so that you can troubleshoot the issue.
+
+// Customize this answer if needed. For example, if you’re deploying on Linux instances, either provide the location for log files on Linux or omit the final sentence. If the Quick Start has no EC2 instances, revise accordingly (something like "and the assets keep running").
+
+WARNING: When you set *Rollback on failure* to *Disabled*, you continue to incur AWS charges for this stack. Delete the stack when you finish troubleshooting.
+
+For more information, see https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/troubleshooting.html[Troubleshooting AWS CloudFormation^].
+
+*Q.* I encountered a *CREATE_FAILED* error on *DeploymentWaitCondition* with [.underline]#WaitCondition timed out. Received 0 conditions when expecting 1# after Rollback on failure set to Disabled.
+
+[#DeploymentWaitCondition-timeout]
+.CREATE_FAILED due to DeploymentWaitCondition timed out.
+image::../docs/deployment_guide/images/DeploymentWaitCondition-timeout.png[DeploymentWaitCondition-timeout]
+
+*A.* Go to *Step Functions* > *State machines* > *DeploymentStateMachine*-xxxxxxxxxxxx, drill into the _Failed_ execution, and look for the #Failed# event(s). Click on the *Logs* hyperlink to the CloudWatch log groups and then drill into the log stream whose last event time around the time of the failed event.
+
+[#DeploymentStateMachine-Failed-A]
+.State Machines lists *Deployment State Machine* with 1 Failed.
+image::../docs/deployment_guide/images/DeploymentStateMachine-Failed-0.png[DeploymentStateMachine-Failed-A]
+
+[#DeploymentStateMachine-Failed-B]
+.Deployment State Machine lists 1 *Execution* Failed.
+image::../docs/deployment_guide/images/DeploymentStateMachine-Failed-B.png[DeploymentStateMachine-Failed-B]
+
+*Q.* I encountered a *Failed* event at the _Step_ *Check ISE status* or at the _Choice_ *If ISE is up and running* in the Deployment State Machine for {partner-product-short-name} on AWS.
+
+*A.* This is due to networking issues. Please verify the existing VPC meets the requirements:
+
+* The DNS attributes: Ensure both https://docs.aws.amazon.com/vpc/latest/userguide/vpc-dns.html#vpc-dns-support[DNS attributes (enableDnsHostnames and enableDnsSupport) in the VPC^] are enabled.
+* Access to AWS services: The VPC private subnets require either Internet access or https://docs.aws.amazon.com/vpc/latest/privatelink/what-is-privatelink.html[VPC endpoints^]) to reach AWS services, such as S3, SSM and SNS.
+
+For your reference, below are two samples of expected log events when the step _Check ISE status_ ran without errors and the choice _If ISE is up and running_ was evaluated successfully.
+
+* When neither {partner-product-short-name} node is ready:
+
+[source.small,python]
+----
+START RequestId: 1927bbcc-dd60-48b6-97cc-d2ca936a2114 Version: $LATEST
+[INFO]	2022-10-09T03:44:08.459Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	Found credentials in environment variables.
+[INFO]	2022-10-09T03:44:09.817Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	Installed ISE Instance IPs are:
+ PPAN - 10.7.1.138 , SPAN - 10.7.2.243
+[INFO]	2022-10-09T03:44:09.817Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	#Setting SSM parameters...
+[INFO]	2022-10-09T03:44:09.973Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	#Retriving SSM parameters...
+[INFO]	2022-10-09T03:44:10.148Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	Primmary Polcy Administration node ip : 10.7.1.138
+[INFO]	2022-10-09T03:44:10.148Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	Secondary Polcy Administration node ip : 10.7.2.243
+[INFO]	2022-10-09T03:44:10.148Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	ADMIN_USERNAME : iseadmin
+[INFO]	2022-10-09T03:44:10.148Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	API_HEADER : {'Content-Type': 'application/json', 'Accept': 'application/json'}
+[INFO]	2022-10-09T03:44:10.148Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	Secondary Polcy Administration node fqdn : ise-aws2.oh-demo.local
+/opt/python/urllib3/connectionpool.py:1045: InsecureRequestWarning: Unverified HTTPS request is being made to host '10.7.1.138'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/1.26.x/advanced-usage.html#ssl-warnings
+warnings.warn(
+[INFO]	2022-10-09T03:44:10.439Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	API response for 10.7.1.138 is 
+{
+    "message": "An invalid response was received from the server",
+    "code": 502
+}
+
+ 
+/opt/python/urllib3/connectionpool.py:1045: InsecureRequestWarning: Unverified HTTPS request is being made to host '10.7.2.243'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/1.26.x/advanced-usage.html#ssl-warnings
+warnings.warn(
+[INFO]	2022-10-09T03:44:10.721Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	API response for 10.7.2.243 is 
+{
+    "message": "An invalid response was received from the server",
+    "code": 502
+}
+
+ 
+END RequestId: 1927bbcc-dd60-48b6-97cc-d2ca936a2114
+REPORT RequestId: 1927bbcc-dd60-48b6-97cc-d2ca936a2114	Duration: 2467.90 ms	Billed Duration: 2468 ms	Memory Size: 128 MB	Max Memory Used: 75 MB	Init Duration: 406.60 ms
+----
+
+
+* When both {partner-product-short-name} nodes are up:
+
+[source.small,python]
+----
+START RequestId: 97c70b95-8234-4af9-bd98-c605e6123ae1 Version: $LATEST
+[INFO]	2022-10-09T03:56:15.261Z	97c70b95-8234-4af9-bd98-c605e6123ae1	#Retriving SSM parameters...
+[INFO]	2022-10-09T03:56:15.596Z	97c70b95-8234-4af9-bd98-c605e6123ae1	Primmary Polcy Administration node ip : 10.7.1.138
+[INFO]	2022-10-09T03:56:15.597Z	97c70b95-8234-4af9-bd98-c605e6123ae1	Secondary Polcy Administration node ip : 10.7.2.243
+[INFO]	2022-10-09T03:56:15.597Z	97c70b95-8234-4af9-bd98-c605e6123ae1	ADMIN_USERNAME : iseadmin
+[INFO]	2022-10-09T03:56:15.597Z	97c70b95-8234-4af9-bd98-c605e6123ae1	API_HEADER : {'Content-Type': 'application/json', 'Accept': 'application/json'}
+[INFO]	2022-10-09T03:56:15.597Z	97c70b95-8234-4af9-bd98-c605e6123ae1	Secondary Polcy Administration node fqdn : ise-aws2.oh-demo.local
+/opt/python/urllib3/connectionpool.py:1045: InsecureRequestWarning: Unverified HTTPS request is being made to host '10.7.1.138'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/1.26.x/advanced-usage.html#ssl-warnings
+warnings.warn(
+[INFO]	2022-10-09T03:56:15.929Z	97c70b95-8234-4af9-bd98-c605e6123ae1	API response for 10.7.1.138 is 
+{
+    "response": [
+        {
+            "hostname": "ise-aws1",
+            "fqdn": "ise-aws1.oh-demo.local",
+            "ipAddress": "10.7.1.138",
+            "roles": [
+                "Standalone"
+            ],
+            "services": [
+                "Profiler",
+                "Session"
+            ],
+            "nodeStatus": "Connected"
+        }
+    ],
+    "version": "1.0.0"
+}
+ 
+[INFO]	2022-10-09T03:56:15.930Z	97c70b95-8234-4af9-bd98-c605e6123ae1	ISE - 10.7.1.138 is up and running
+/opt/python/urllib3/connectionpool.py:1045: InsecureRequestWarning: Unverified HTTPS request is being made to host '10.7.2.243'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/1.26.x/advanced-usage.html#ssl-warnings
+warnings.warn(
+[INFO]	2022-10-09T03:56:17.101Z	97c70b95-8234-4af9-bd98-c605e6123ae1	API response for 10.7.2.243 is 
+{
+    "response": [
+        {
+            "hostname": "ise-aws2",
+            "fqdn": "ise-aws2.oh-demo.local",
+            "ipAddress": "10.7.2.243",
+            "roles": [
+                "Standalone"
+            ],
+            "services": [
+                "Profiler",
+                "Session"
+            ],
+            "nodeStatus": "Connected"
+        }
+    ],
+    "version": "1.0.0"
+}
+ 
+[INFO]	2022-10-09T03:56:17.101Z	97c70b95-8234-4af9-bd98-c605e6123ae1	ISE - 10.7.2.243 is up and running
+END RequestId: 97c70b95-8234-4af9-bd98-c605e6123ae1
+REPORT RequestId: 97c70b95-8234-4af9-bd98-c605e6123ae1	Duration: 1942.49 ms	Billed Duration: 1943 ms	Memory Size: 128 MB	Max Memory Used: 77 MB
+----
+

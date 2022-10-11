@@ -3,6 +3,6 @@
 This Quick Start provides the following deployment options:
 
 * http://qs_launch_permalink[Deploy {partner-product-short-name} into a new VPC^]. This option builds a new AWS environment that consists of the VPC, subnets, NAT gateways, security groups, bastion hosts, and other infrastructure components. It then deploys {partner-product-short-name} into this new VPC.
-* http://qs_launch_permalink[Deploy {partner-product-short-name} into an existing VPC^]. This option provisions {partner-product-short-name} in your existing AWS infrastructure.
+* http://qs_launch_permalink[Deploy {partner-product-short-name} into an existing VPC^]. This option provisions {partner-product-short-name} in your existing AWS infrastructure. At minimal, the existing VPC requies two private subnets in two availability zones. The VPC should have outbound Internet access, or VPC endpoints to S3, SNS, and SSM and the access within the subnets. It requires both https://docs.aws.amazon.com/vpc/latest/userguide/vpc-dns.html#vpc-dns-support[DNS attributes (enableDnsHostnames and enableDnsSupport) in the VPC^] enabled.
 
 This Quick Start provides separate templates for these options. It also lets you configure Classless Inter-Domain Routing (CIDR) blocks, instance types, and {partner-product-short-name} settings.
