@@ -1,16 +1,16 @@
 :xrefstyle: short
 
-Deploying this Quick Start with default parameters builds the following {partner-product-short-name} environment in the
+Deploying this Partner Solution with default parameters builds the following {partner-product-short-name} environment in the
 AWS Cloud.
 
 // Replace this example diagram with your own. Follow our wiki guidelines: https://w.amazon.com/bin/view/AWS_Quick_Starts/Process_for_PSAs/#HPrepareyourarchitecturediagram. Upload your source PowerPoint file to the GitHub {deployment name}/docs/images/ directory in its repository.
 
 === General
 [#architecture1]
-.Quick Start architecture for {partner-product-short-name} on AWS
+.Partner Solution architecture for {partner-product-short-name} on AWS
 image::../docs/deployment_guide/images/quickstart-cisco-ise-on-aws-architecture-diagram.png[Architecture]
 
-As shown in <<architecture1>>, this Quick Start sets up the following:
+As shown in <<architecture1>>, this Partner Solution sets up the following:
 
 * A highly available architecture that spans two Availability Zones.
 * A virtual private cloud (VPC)* configured with public and private subnets, according to AWS
@@ -24,33 +24,38 @@ best practices, to provide you with your own virtual network on AWS.
 // Add bullet points for any additional components that are included in the deployment. Ensure that the additional components are shown in the architecture diagram. End each bullet with a period.
 
 * AWS Route53 for DNS resolution between the two {partner-product-short-name} instances.
-* AWS Lambda functions, Amazon Step Functions State Machines, AWS Systems Manager (SSM) Parameter Store, Amazon CloudWatch, Amazon EventBridge rules, and Amazon Simple Notification Service (SNS)
-** to form a two-node (Small) {partner-product-short-name} deployment,
-** to perform health check on the {partner-product-short-name} deployment, and
-** to monitor the {partner-product-short-name} instances and to automate Policy Administration Node (PAN) fail over.
+* AWS Lambda functions for healthcheck, deployment and failover between the two {partner-product-short-name} instances.
+* Amazon Step Functions State Machines for deployment and failover between the two {partner-product-short-name} instances.
+* AWS Systems Manager (SSM) Parameter Store for storing state information about the two {partner-product-short-name} instances.
+* Amazon CloudWatch for logging and generating events about the two {partner-product-short-name} instances.
+* Amazon EventBridge rules for triggering Amazon Step Function State Machine executions.
+* Amazon Simple Notification Service (SNS) for email-notifications related to:
+** forming a two-node {partner-product-short-name} deployment,
+** performing health check on the {partner-product-short-name} deployment, and
+** monitoring the {partner-product-short-name} instances and to automate Policy Administration Node (PAN) fail over.
 
-[.small]#* The template that deploys this Quick Start into an existing VPC skips the components marked by asterisks and prompts you for your existing VPC configuration.#
+[.small]#* The template that deploys this Partner Solution into an existing VPC skips the components marked by asterisks and prompts you for your existing VPC configuration.#
 
 === Deployment State Machine
 [#architecture2]
-.Quick Start Deployment State Machine architecture for {partner-product-short-name} on AWS
+.Partner Solution Deployment State Machine architecture for {partner-product-short-name} on AWS
 image::../docs/deployment_guide/images/quickstart-cisco-ise-on-aws-architecture-DeploymentStateMachine.png[DeploymentStateMachineArchitecture]
 
-As shown in <<architecture2>>, this Quick Start Deployment State Machine performs the following steps to form a two-node {partner-product-short-name} deployment:
+As shown in <<architecture2>>, this Partner Solution Deployment State Machine performs the following steps to form a two-node {partner-product-short-name} deployment:
 
 . Check {partner-product-short-name} status: _Verify both {partner-product-short-name} instances are up and ready._
 . Set Primary PAN: _Make the first {partner-product-short-name} instance as the primary admin node (primary PAN or PPAN) of a new {partner-product-short-name} deployment._
 . Register Secondary Node: _Register the second {partner-product-short-name} instance as the secondary admin node (secondary PAN or SPAN) into the same {partner-product-short-name} deployment._
 . Check Sync Status: _Check the deployment status and verify that SPAN has synchronized to SPAN._
 
-NOTE: CloudFormation executes this Quick Start Deployment State Machine towards the end of the stack creation.
+NOTE: CloudFormation executes this Partner Solution Deployment State Machine towards the end of the stack creation.
 
 === PAN Failover State Machine
 [#architecture3]
-.Quick Start Failover State Machine architecture for {partner-product-short-name} on AWS
+.Partner Solution Failover State Machine architecture for {partner-product-short-name} on AWS
 image::../docs/deployment_guide/images/quickstart-cisco-ise-on-aws-architecture-FailoverStateMachine.png[FailoverStateMachineArchitecture]
 
-When PPAN fails, we need promote SPAN as primary to re-gain access to the Cisco administrative web console and to allow certain aspects of {partner-product-short-name} services to continue to work. As shown in <<architecture3>>, this Quick Start Failover State Machine performs the following steps to detect PPAN failures and to promote SPAN to primary:
+When PPAN fails, we need promote SPAN as primary to re-gain access to the Cisco administrative web console and to allow certain aspects of {partner-product-short-name} services to continue to work. As shown in <<architecture3>>, this Partner Solution Failover State Machine performs the following steps to detect PPAN failures and to promote SPAN to primary:
 
 . Check PPAN Status: _Detect PPAN failures._
 . Check SPAN Getway Status: _Verify whether the API gateway on SPAN is accessible._
@@ -59,11 +64,11 @@ When PPAN fails, we need promote SPAN as primary to re-gain access to the Cisco 
 
 .AutoFailover
 ****
-NOTE: *AutoFailover* is an input parameter to the CloudFormation stacks. When `ENABLED`, the stacks will schedule this Quick Start Failover State Machine to run periodically as https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-rules.html[an Amazon EventBridge rule^]. This is `DISABLED` by default in the templates, because there are only two {partner-product-short-name} nodes and because it may incur ~ 30-minute downtime while the services are restarted after PPAN fails and SPAN is promoted to primary.
+NOTE: *AutoFailover* is an input parameter to the CloudFormation stacks. When `ENABLED`, the stacks will schedule this Partner Solution Failover State Machine to run periodically as https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-rules.html[an Amazon EventBridge rule^]. This is `DISABLED` by default in the templates, because there are only two {partner-product-short-name} nodes and because it may incur ~ 30-minute downtime while the services are restarted after PPAN fails and SPAN is promoted to primary.
 ****
 
 === Parameter Store
-This Quick Start stores its configurable parameters in https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html[AWS Systems Manager Parameter Store^]. The parameters are:
+This Partner Solution stores its configurable parameters in https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html[AWS Systems Manager Parameter Store^]. The parameters are:
 
 [%autowidth]
 |===
