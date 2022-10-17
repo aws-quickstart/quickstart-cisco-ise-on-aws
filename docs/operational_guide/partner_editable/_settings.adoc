@@ -1,0 +1,12 @@
+:partner-solution-project-name: quickstart-cisco-ise-on-aws
+:partner-solution-github-org: aws-quickstart
+:partner-product-name: Cisco Identity Services Engine
+:partner-product-short-name: Cisco ISO
+:partner-company-name: Cisco Systems Inc.
+:doc-month: October
+:doc-year: 2022
+:partner-contributors: Sudhanshu Sharma, Venkatesh Sivakumar, Divya Anand, Hsing-Tsu Lai, Prashanth R, Hosuk Won, {partner-company-name}
+//:other-contributors: Akua Mansa, Trek10
+:aws-contributors: Muffadal Quettawala, AWS Partner team
+:aws-ia-contributors: Vinod Shukla, AWS Integration & Automation team
+// :private_repo:
