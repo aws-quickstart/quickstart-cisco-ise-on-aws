@@ -28,7 +28,7 @@ Metadata:
   'AWS::CloudFormation::Interface':
     ParameterGroups:
       - Label:
-          default: ISE Small Deployment Instance Details
+          default: ISE small-deployment instance details
         Parameters:
           - Node1Hostname
           - Node2Hostname
@@ -42,7 +42,7 @@ Metadata:
           - AutoFailover
           - HealthcheckRate
       - Label:
-          default: ISE Network Configuration
+          default: ISE network configuration
         Parameters:
           - VPCID
           - DNSDomain
@@ -50,25 +50,25 @@ Metadata:
           - ManagementSubnet1Id
           - ManagementSubnet2Id
       - Label:
-          default: ISE Services
+          default: ISE services
         Parameters:
           - ERSapi
           - OpenAPI
           - PXGrid
           - PXGridCloud
       - Label:
-          default: Load Balancer IP Addresses
+          default: Load balancer IP addresses
         Parameters:
           - LBPrivateAddressSubnet1
           - LBPrivateAddressSubnet2
       - Label:
-          default: ISE User Details
+          default: ISE user details
         Parameters:
           - password
           - ConfirmPwd
           - EmailSubscription
       - Label:
-          default: AWS Quick Start configuration
+          default: AWS Partner Solution  configuration
         Parameters:
           - QSS3BucketName
           - QSS3BucketRegion
@@ -77,31 +77,31 @@ Metadata:
       KeyPairName:
         default: SSH key name
       Node1Hostname:
-        default: Host name node 1
+        default: Hostname node 1
       Node2Hostname:
-        default: Host name node 2
+        default: Hostname node 2
       ManagementSubnet1Id:
-        default: Management Network 1
+        default: Management network 1
       ManagementSubnet2Id:
-        default: Management Network 2
+        default: Management network 2
       TimeZone:
-        default: Time Zone
+        default: Time zone
       ISEInstanceType:
-        default: Instance Type
+        default: Instance type
       ISEVersion:
         default: ISE version
       EmailSubscription:
         default: Email address
       EBSEncrypt:
-        default: EBS Encryption
+        default: EBS encryption
       StorageSize:
-        default: Volume Size
+        default: Volume size
       VPCCIDR:
         default: VPC CIDR
       VPCID:
         default: VPC ID
       DNSDomain:
-        default: DNS Domain
+        default: DNS domain
       ERSapi:
         default: ERS
       OpenAPI:
@@ -111,9 +111,9 @@ Metadata:
       PXGridCloud:
         default: pxGrid Cloud
       password:
-        default: Enter Password
+        default: Administrator password
       ConfirmPwd:
-        default: Re-Enter Password
+        default: Confirm password
       QSS3BucketName:
         default: Quick Start S3 bucket name
       QSS3BucketRegion:
@@ -121,127 +121,117 @@ Metadata:
       QSS3KeyPrefix:
         default: Quick Start S3 key prefix
       AutoFailover:
-        default: Automatic Failover
+        default: Automatic fail over
       FailoverRate:
-        default: Failover Rate
+        default: Failover rate
       HealthcheckRate:
-        default: Healthcheck Rate
+        default: Health check rate
       LBPrivateAddressSubnet1:
-        default: Load Balancer Private IP Address for Subnet-1
+        default: Private subnet 1 load balancer IP address
       LBPrivateAddressSubnet2:
-        default: Load Balancer Private IP Address for Subnet-2
+        default: Private subnet 2 load balancer IP address
 
 Parameters:
   KeyPairName:
     Description: >-
-      To access the Cisco ISE instance via SSH, choose the key pair that you
-      created/imported in AWS. Create/import a key pair in AWS now
-      if you have not configured one already. Usage example:  ssh -i
-      mykeypair.pem admin@myhostname.compute-1.amazonaws.com.
-      NOTE: The username for ISE 3.1 is "admin" and for ISE 3.2+ is "iseadmin".
+      Choose the key pair that you created or imported previously in your AWS account. If you don't have a key pair in your AWS account, create or import one before deploying this Partner Solution. A key pair is required to access the Cisco ISE instance using SSH (Secure Shell). For example, "ssh -i mykeypair.pem admin@myhostname.compute-1.amazonaws.com". Note: User names for ISE 3.1 and 3.2+ are "admin" and "iseadmin", respectively.
     Type: 'AWS::EC2::KeyPair::KeyName'
     AllowedPattern: .+
-    ConstraintDescription: Instance Key Pair cannot be empty
+    ConstraintDescription: You must choose a key pair.
   ISEInstanceType:
     Type: String
-    Description: Choose the required Cisco ISE instance type.
+    Description: Cisco ISE EC2 instance type.
     Default: c5.4xlarge
     AllowedValues:
       - c5.4xlarge
       - m5.4xlarge
       - c5.9xlarge
       - t3.xlarge
-    ConstraintDescription: Instance type should be one of the allowed values
+    ConstraintDescription: Choose one of the values provided.
   ISEVersion:
     Type: String
-    Description: The ISE software version to be used for the ISE instances.
+    Description: The ISE software version for the ISE instances.
     AllowedValues:
       - '3.1'
       - '3.2'
     Default: '3.1'
   EmailSubscription:
-    Description: 'Email list which will be notified about the Deployment health and Failover status'
+    Description: List of subscriber email addresses to receive deployment health and failover status notifications.
     Type: String
   EBSEncrypt:
-    Description: Choose true to enable EBS encryption.
+    Description: Choose "true" to enable EBS encryption.
     Type: String
     Default: 'false'
     AllowedValues:
       - 'false'
       - 'true'
-    ConstraintDescription: It can either be true or false
+    ConstraintDescription: Choose "true" or "false".
   ERSapi:
-    Description: Do you wish to enable ERS?
+    Description: Choose "yes" to enable ERS.
     Type: String
     Default: 'yes'
     AllowedValues:
       - 'yes'
       - 'no'
-    ConstraintDescription: It can either be yes or no
+    ConstraintDescription: Choose "yes" or "no".
   OpenAPI:
-    Description: Do you wish to enable OpenAPI?
+    Description: Choose "no" to disable OpenAPI.
     Type: String
     Default: 'yes'
     AllowedValues:
       - 'yes'
       - 'no'
-    ConstraintDescription: It can either be yes or no
+    ConstraintDescription: Choose "yes" or "no".
   PXGrid:
-    Description: Do you wish to enable pxGrid?
+    Description: Chose "yes" to enable pxGrid.
     Type: String
     Default: 'no'
     AllowedValues:
       - 'yes'
       - 'no'
-    ConstraintDescription: It can either be yes or no
+    ConstraintDescription: Choose "yes" or "no".
   PXGridCloud:
-    Description: Do you wish to enable pxGrid Cloud?
+    Description: Choose "yes" to enable pxGrid Cloud.
     Type: String
     Default: 'no'
     AllowedValues:
       - 'yes'
       - 'no'
-    ConstraintDescription: It can either be yes or no
+    ConstraintDescription: Choose "yes" or "no".
   ManagementSubnet1Id:
     Type: 'AWS::EC2::Subnet::Id'
     Description: >-
-      ID of the private subnet in Availability Zone 1 of your existing VPC (e.g., subnet-z0376dab).
+      ID of the private subnet in Availability Zone 1 of your existing VPC (for example, "subnet-z0376dab").
   ManagementSubnet2Id:
     Type: 'AWS::EC2::Subnet::Id'
     Description: >-
-      ID of the private subnet in Availability Zone 2 of your existing VPC (e.g., subnet-z0376dab).
+      ID of the private subnet in Availability Zone 2 of your existing VPC (for example, "subnet-z0376dab").
   Node1Hostname:
     Description: >-
-      Enter the hostname. This field only supports alphanumeric characters and
-      hyphen (-). The length of the hostname should not exceed 19 characters.
+      Hostname for node 1, not to exceed 19 characters. Hostname can include alphanumeric characters and hyphen (-).
     Type: String
     Default: iseserver1
     AllowedPattern: '^[a-zA-Z0-9-]{1,19}$'
     ConstraintDescription: >-
-      This field only supports alphanumeric characters and hyphen (-). Hostname
-      should not be more than 19 characters.
+      Maximum length is 19 characters. Hostname can include alphanumeric characters and hyphen (-).
   Node2Hostname:
     Description: >-
-      Enter the hostname. This field only supports alphanumeric characters and
-      hyphen (-). The length of the hostname should not exceed 19 characters.
+      Hostname for node 2, not to exceed 19 characters. Hostname can include alphanumeric characters and hyphen (-).
     Type: String
     Default: iseserver2
     AllowedPattern: '^[a-zA-Z0-9-]{1,19}$'
     ConstraintDescription: >-
-      This field only supports alphanumeric characters and hyphen (-). Hostname
-      should not be more than 19 characters.
+      Maximum length is 19 characters. Hostname can include alphanumeric characters and hyphen (-).
   DNSDomain:
     Description: >-
-      Enter a domain name in correct syntax (for example, cisco.com). The valid
-      characters for this field are ASCII characters, numerals, hyphen (-), and
+      Enter a domain name (for example, "cisco.com"). Domain name can include ASCII characters, numbers, hyphen (-), and
       period (.). If you use the wrong syntax, Cisco ISE services might not come
       up on launch.
     Type: String
     Default: example.com
     AllowedPattern: '^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+$'
     ConstraintDescription: >-
-      Cannot be an IP address. Valid characters include ASCII characters, any
-      numerals, the hyphen (-), and the period (.) for DNS domain.
+      Cannot be an IP address. Domain name can include ASCII characters, numbers, the hyphen (-), and the period (.) for DNS domain.
   TimeZone:
     Description: Choose a system time zone.
     Type: String
@@ -635,28 +625,20 @@ Parameters:
       - WET
   password:
     Description: >-
-      Enter a password for the default admin user. The password must be aligned
-      with the Cisco ISE password policy (must contain one or more lowercase, uppercase, numeric, and non-alphanumeric characters). The configured password is used for
-      Cisco ISE GUI access. Warning: the password is displayed in plaintext in
-      the user data section of the instance settings window in the AWS Management Console.
-      NOTE: The username for ISE 3.1 is "admin" and for ISE 3.2+ is "iseadmin".
+      Password for the default administrator user, used to access the Cisco ISE console. Must contain 6-25 characters and contain at least one number, uppercase letter, and lowercase letter. Valid characters: A-Z, a-z, 0-9, and . , + = @ ~ ! _ - (hyphen). Cannot be same as user name ("admin") or reverse user name ("nimda"). Cannot contain "cisco" or "ocsic". Warning: This password displays in plaintext on the Edit user data page in the Amazon EC2 console. Note: User names for ISE 3.1 and 3.2+ are "admin" and "iseadmin", respectively.
     NoEcho: 'True'
     Type: String
     AllowedPattern: >-
       ^((?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@~*!,+=_-])(?!.*?[iI]{1}[sS]{1}[eE]{1}[aA]{1}[dD]{1}[mM]{1}[iI]{1}[nN]{1})(?!.*?[nN]{1}[iI]{1}[mM]{1}[dD]{1}[aA]{1}[eE]{1}[sS]{1}[iI]{1})(?!.*?[cC]{1}[iI]{1}[sS]{1}[cC]{1}[oO]{1})(?!.*?[oO]{1}[cC]{1}[sS]{1}[iI]{1}[cC]{1})|(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?!.*?[iI]{1}[sS]{1}[eE]{1}[aA]{1}[dD]{1}[mM]{1}[iI]{1}[nN]{1})(?!.*?[nN]{1}[iI]{1}[mM]{1}[dD]{1}[aA]{1}[eE]{1}[sS]{1}[iI]{1})(?!.*?[cC]{1}[iI]{1}[sS]{1}[cC]{1}[oO]{1})(?!.*?[oO]{1}[cC]{1}[sS]{1}[iI]{1}[cC]{1})).{6,25}$
     ConstraintDescription: >-
-      The password for username (iseadmin) to log in to the Cisco ISE GUI.
-      The password must contain a minimum of 6 and maximum of 25 characters, and must include at least one numeral, one uppercase letter, and one lowercase letter.
-      Password should not be the same as username or its reverse(iseadmin or nimdaesi) or (cisco or ocsic).
-      Allowed Special Characters @~*!,+=_-
+      Minimum of six characters. One digit, one uppercase, and one lowercase letter required. Cannot be same as user name ("admin") or reverse user name ("nimda"). Cannot contain "cisco" or "ocsic".
   ConfirmPwd:
-    Description: Retype Password
+    Description: Confirm password.
     NoEcho: 'True'
     Type: String
   FailoverRate:
     Description:
-      The rate (frequency) that determines when CloudWatch Events runs the rule that
-      triggers the Route Monitor Lambda function.
+      The frequency at which CloudWatch Events invokes the Lambda function that invokes the failover state machine.
     Default: rate(60 minutes)
     AllowedValues:
       - rate(1 minute)
@@ -665,8 +647,7 @@ Parameters:
     Type: String
   HealthcheckRate:
     Description:
-      The rate (frequency) that determines when CloudWatch Events runs the rule that
-      triggers the Route Monitor Lambda function.
+      The frequency at which CloudWatch Events invokes the Lambda function that checks ISE deployment health.
     Default: rate(10 minutes)
     AllowedValues:
       - rate(1 minute)
@@ -674,62 +655,75 @@ Parameters:
       - rate(60 minutes)
     Type: String
   AutoFailover:
-    Description: Do you wish to enable auto-failover mechanism?
+    Description: Choose ENABLED to enable auto-failover mechanism.
     Type: String
     Default: 'DISABLED'
     AllowedValues:
       - 'ENABLED'
       - 'DISABLED'
-    ConstraintDescription: It can either be ENABLED or DISABLED
+    ConstraintDescription: Choose ENABLED or DISABLED.
   StorageSize:
     Description: >-
-      Specify the storage in GB (Minimum 300GB and Maximum 2400GB). 600GB is
-      recommended for production use, storage lesser than 600GB can be used for
-      evaluation purpose only. On terminating the instance, volume will be
-      deleted as well.
+      Storage size, 300GB–2400GB. We recommend 600GB+ for production use. Only use a storage size less than 600GB for evaluation purposes. Storage volume deleted when instance is terminated.
     Type: Number
     Default: '600'
     MinValue: '300'
     MaxValue: '2400'
     ConstraintDescription: >-
-      Specify the storage in GB (Minimum 300GB and Maximum 2400GB). 600GB is
-      recommended for production use, storage lesser than 600GB can be used for
-      evaluation purpose only. On terminating the instance, volume will be
-      deleted as well.
+      Storage size, 300GB–2400GB. We recommend 600GB+ for production use. Only use a storage size less than 600GB for evaluation purposes. Storage volume deleted when instance is terminated.
   VPCID:
-    Description: ID of your existing VPC for deployment (e.g., vpc-0343606e).
+    Description: ID of your existing VPC for deployment (for example, "vpc-0343606e").
     Type: AWS::EC2::VPC::Id
   VPCCIDR:
     AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$'
-    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    ConstraintDescription: CIDR block parameter must be in the form "x.x.x.x/16-28".
     Default: 10.0.0.0/16
     Description: CIDR block for the VPC.
     Type: String
   LBPrivateAddressSubnet1:
     AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])'
-    ConstraintDescription: IP Address parameter must be in the form x.x.x.x
-    Description: Private IP Address of Load Balancer for Private Subnet-1
+    ConstraintDescription: IP address parameter must be in the form "x.x.x.x".
+    Description: Private IP address of load balancer for private subnet 1.
     Type: String
   LBPrivateAddressSubnet2:
     AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])'
-    ConstraintDescription: IP Address parameter must be in the form x.x.x.x
-    Description: Private IP Address of Load Balancer for Private Subnet-2
+    ConstraintDescription: IP address parameter must be in the form "x.x.x.x".
+    Description: Private IP address of load balancer for private subnet 2.
     Type: String
   QSS3BucketName:
-    AllowedPattern: "^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$"
-    ConstraintDescription: "Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-)."
+    AllowedPattern: ^[0-9a-z]+([0-9a-z-\.]*[0-9a-z])*$
+    ConstraintDescription: >-
+      The S3 bucket name can include numbers, lowercase letters,
+      and hyphens (-), but it cannot start or end with a hyphen.
     Default: aws-quickstart
-    Description: "S3 bucket name for the Quick Start assets. Quick Start bucket name can include numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen (-)."
+    Description: >-
+      Name of the S3 bucket for your copy of the deployment assets. Keep the default
+      name unless you are customizing the template. Changing the name updates code
+      references to point to a new location.
+    MinLength: 3
+    MaxLength: 63
     Type: String
   QSS3BucketRegion:
     Default: us-east-1
-    Description: 'The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value.'
+    Description: >-
+      AWS Region where the S3 bucket (QSS3BucketName) is hosted. Keep
+      the default Region unless you are customizing the template. Changing the Region
+      updates code references to point to a new location. When using your own bucket,
+      specify the Region.
     Type: String
   QSS3KeyPrefix:
-    AllowedPattern: "^[0-9a-zA-Z-/]*$"
-    ConstraintDescription: "Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/)."
+    AllowedPattern: ^([0-9a-zA-Z!-_\.\*'\(\)/]+/)*$
+    ConstraintDescription: >-
+      The S3 key prefix can include numbers, lowercase letters, uppercase letters,
+      hyphens (-), underscores (_), periods (.), asterisks (*), single quotes ('),
+      open parenthesis ((), close parenthesis ()), and forward slashes (/). End the
+      prefix with a forward slash.
     Default: quickstart-cisco-ise-on-aws/
-    Description: "S3 key prefix for the Quick Start assets. Quick Start key prefix can include numbers, lowercase letters, uppercase letters, hyphens (-), and forward slash (/)."
+    Description: >-
+      S3 key prefix that is used to simulate a folder for your copy of the
+      deployment assets. Keep the default prefix unless you are customizing
+      the template. Changing the prefix updates code references to point to
+      a new location.
     Type: String
 Conditions:
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
@@ -785,3 +779,6 @@ Outputs:
   IseNode2ID:
     Description: "The instance ID for the ISE Node 2"
     Value: !GetAtt ISEStack.Outputs.ISENode2ID
+  Postdeployment:
+    Description: See the deployment guide for postdeployment steps.
+    Value: https://fwd.aws/mA8Ym?
