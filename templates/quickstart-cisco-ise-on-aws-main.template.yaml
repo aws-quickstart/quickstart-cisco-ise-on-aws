@@ -222,7 +222,7 @@ Parameters:
     Type: String
   KeyPairName:
     Description: >-
-       Choose the key pair that you created or imported previously in your AWS account. If you don't have a key pair in your AWS account, create or import one before deploying this Partner Solution. A key pair is required to access the Cisco ISE instance using SSH (Secure Shell). For example, "ssh -i mykeypair.pem admin@myhostname.compute-1.amazonaws.com". The user name for ISE 3.1 is "admin". The user name for ISE 3.2+ is "iseadmin".
+       Choose the key pair that you created or imported previously in your AWS account. If you don't have a key pair in your AWS account, create or import one before deploying this Partner Solution. A key pair is required to access the Cisco ISE instance using SSH (Secure Shell). For example, "ssh -i mykeypair.pem admin@myhostname.compute-1.amazonaws.com". Note: User names for ISE 3.1 and 3.2+ are "admin" and "iseadmin", respectively.
     Type: 'AWS::EC2::KeyPair::KeyName'
     AllowedPattern: .+
     ConstraintDescription: You must choose a key pair.
@@ -331,19 +331,18 @@ Parameters:
     AllowedValues:
       - 'ENABLED'
       - 'DISABLED'
-    ConstraintDescription: It can either be ENABLED or DISABLED
+    ConstraintDescription: Choose ENABLED or DISABLED.
   DNSDomain:
     Description: >-
-      Enter a domain name in correct syntax (for example, cisco.com). The valid
-      characters for this field are ASCII characters, numerals, hyphen (-), and
+      Enter a domain name (for example, "cisco.com"). Use correct syntax—valid
+      characters include ASCII characters, numerals, hyphen (-), and
       period (.). If you use the wrong syntax, Cisco ISE services might not come
       up on launch.
     Type: String
     Default: example.com
     AllowedPattern: '^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+$'
     ConstraintDescription: >-
-      Cannot be an IP address. Valid characters include ASCII characters, any
-      numerals, the hyphen (-), and the period (.) for DNS domain.
+      Cannot be an IP address. Valid characters include ASCII characters, numerals, hyphen (-), and period (.).
   TimeZone:
     Description: Choose a system time zone.
     Type: String
@@ -737,39 +736,26 @@ Parameters:
       - WET
   password:
     Description: >-
-      Enter a password for the default admin user. The password must be aligned
-      with the Cisco ISE password policy (must contain one or more lowercase, uppercase, numeric, and non-alphanumeric characters). The configured password is used for
-      Cisco ISE GUI access. Warning: the password is displayed in plaintext in
-      the user data section of the instance settings window in the AWS Management Console.
-      NOTE: The username for ISE 3.1 is "admin" and for ISE 3.2+ is "iseadmin".
+      Password for the default administration user to access the Cisco ISE console. The password must follow Cisco ISE password policy: minimum of six characters; one digit, one uppercase, and one lowercase letter required; cannot be same as user name; cannot contain "Cisco". Warning: This password displays in plaintext on the Edit user data page in the Amazon EC2 console. Note: User names for ISE 3.1 and 3.2+ are "admin" and "iseadmin", respectively.
     NoEcho: 'True'
     Type: String
     AllowedPattern: >-
       ^(?=.*?[A-Z])(?=.*?[a-z])(?i)(?!.*?admin|.*?cisco|.*?nimda|.*?ocsic)(?-i)(?=.*?[0-9]).{6,}$
     ConstraintDescription: >-
-      Password constraints: One digit is required. One uppercase letter. One
-      lowercase letter. Password should not be the same as username(admin).
-      Should not contain the word cisco. Minimum password length should be 6
-      character.
+      Minimum of six characters. One digit, one uppercase, and one lowercase letter required. Cannot be same as user name. Cannot contain "Cisco".
   ConfirmPwd:
     Description: Confirm password entered in the password field.
     NoEcho: 'True'
     Type: String
   StorageSize:
     Description: >-
-      Specify the storage in GB (minimum 300GB and maximum 2400GB). 600GB is
-      recommended for production use, storage lesser than 600GB can be used for
-      evaluation purpose only. On terminating the instance, volume will be
-      deleted as well.
+      Storage size, 300GB–600GB. We recommend 600GB+ for production use. Only use a storage size less than 600GB for evaluation purposes. Storage volume deleted when instance is terminated.
     Type: Number
     Default: '600'
     MinValue: '300'
     MaxValue: '2400'
     ConstraintDescription: >-
-      Specify the storage in GB (Minimum 300GB and Maximum 2400GB). 600GB is
-      recommended for production use, storage lesser than 600GB can be used for
-      evaluation purpose only. On terminating the instance, volume will be
-      deleted as well.
+      Storage size, 300GB–600GB. We recommend 600GB+ for production use. Only use a storage size less than 600GB for evaluation purposes. Storage volume deleted when instance is terminated.
 Conditions:
   UsingDefaultBucket: !Equals
     - !Ref QSS3BucketName
@@ -854,3 +840,6 @@ Outputs:
       Fn::GetAtt:
       - VPCStack
       - Outputs.VPCID
+  Postdeployment:
+    Description: See the deployment guide for postdeployment steps.
+    Value: https://fwd.aws/mA8Ym?
