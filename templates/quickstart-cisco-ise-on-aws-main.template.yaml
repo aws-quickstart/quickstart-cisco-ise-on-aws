@@ -222,9 +222,7 @@ Parameters:
     Type: String
   KeyPairName:
     Description: >-
-      A key pair is required to access the Cisco ISE instance using SSH (Secure Shell). Choose the key pair that you created or imported previously in your AWS account. If you don't have a key pair in your AWS account, create or import one before deploying this Partner Solution. Usage example:  ssh -i
-      mykeypair.pem admin@myhostname.compute-1.amazonaws.com.
-      NOTE: The username for ISE 3.1 is "admin" and for ISE 3.2+ is "iseadmin".
+       Choose the key pair that you created or imported previously in your AWS account. If you don't have a key pair in your AWS account, create or import one before deploying this Partner Solution. A key pair is required to access the Cisco ISE instance using SSH (Secure Shell). For example, "ssh -i mykeypair.pem admin@myhostname.compute-1.amazonaws.com". The user name for ISE 3.1 is "admin". The user name for ISE 3.2+ is "iseadmin".
     Type: 'AWS::EC2::KeyPair::KeyName'
     AllowedPattern: .+
     ConstraintDescription: You must choose a key pair.
