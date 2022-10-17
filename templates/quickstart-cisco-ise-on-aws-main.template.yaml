@@ -228,23 +228,23 @@ Parameters:
     ConstraintDescription: You must choose a key pair.
   ISEInstanceType:
     Type: String
-    Description: Choose the required Cisco ISE instance type.
+    Description: Cisco ISE EC2 instance type.
     Default: c5.4xlarge
     AllowedValues:
       - c5.4xlarge
       - m5.4xlarge
       - c5.9xlarge
       - t3.xlarge
-    ConstraintDescription: Instance type should be one of the allowed values
+    ConstraintDescription: Choose one of the values provided.
   ISEVersion:
     Type: String
-    Description: The ISE software version to be used for the ISE instances.
+    Description: ISE software version to be used for the ISE instances.
     AllowedValues:
       - '3.1'
       - '3.2'
     Default: '3.1'
   EmailSubscription:
-    Description: 'Email list which will be notified about the deployment health and failover status.'
+    Description: List of subscriber email addresses to notify about deployment health and failover status.
     Type: String
   EBSEncrypt:
     Description: Choose true to enable EBS encryption.
@@ -253,7 +253,7 @@ Parameters:
     AllowedValues:
       - 'false'
       - 'true'
-    ConstraintDescription: It can either be true or false
+    ConstraintDescription: Choose true or false.
   ERSapi:
     Description: Choose yes to enable ERS.
     Type: String
@@ -261,7 +261,7 @@ Parameters:
     AllowedValues:
       - 'yes'
       - 'no'
-    ConstraintDescription: It can either be yes or no
+    ConstraintDescription: Choose yes or no.
   OpenAPI:
     Description: Choose yes to enable OpenAPI.
     Type: String
@@ -269,7 +269,7 @@ Parameters:
     AllowedValues:
       - 'yes'
       - 'no'
-    ConstraintDescription: It can either be yes or no
+    ConstraintDescription: Choose yes or no.
   PXGrid:
     Description: Chose yes to enable pxGrid.
     Type: String
@@ -277,7 +277,7 @@ Parameters:
     AllowedValues:
       - 'yes'
       - 'no'
-    ConstraintDescription: It can either be yes or no
+    ConstraintDescription: Choose yes or no.
   PXGridCloud:
     Description: Choose yes to enable pxGrid Cloud.
     Type: String
@@ -285,7 +285,7 @@ Parameters:
     AllowedValues:
       - 'yes'
       - 'no'
-    ConstraintDescription: It can either be yes or no
+    ConstraintDescription: Choose yes or no.
   Node1Hostname:
     Description: >-
       Enter the hostname. This field only supports alphanumeric characters and
@@ -308,8 +308,7 @@ Parameters:
       should not be more than 19 characters.
   FailoverRate:
     Description:
-      The rate (frequency) that determines when CloudWatch Events runs the rule
-      that triggers the Lambda function which triggers Failover State Machine.
+      The frequency at which CloudWatch Events invokes the failover state machine.
     Default: rate(60 minutes)
     AllowedValues:
       - rate(1 minute)
@@ -318,8 +317,7 @@ Parameters:
     Type: String
   HealthcheckRate:
     Description:
-      The rate (frequency) that determines when CloudWatch Events runs the rule
-      that triggers the Lambda function which checks health status of ISE deployment.
+      The frequency at which CloudWatch Events invokes the Lambda function that checks ISE deployment health.
     Default: rate(10 minutes)
     AllowedValues:
       - rate(1 minute)
