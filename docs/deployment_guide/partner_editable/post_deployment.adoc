@@ -6,7 +6,7 @@ After deployment, you must do the following:
 . Confirm subscription: SNS sends an email with the subject *AWS Notification - Subscription Confirmation* to the email address entered as *EmailSubscription* parameter in the template. Please click the link to confirm subscription to the topic *NotifyAdminTopic* so that SNS can notify you any messages on the topic.
 . Enter Maintenance mode: In order to avoid false alarms and accidentally trigger PAN failover, put the deployment in maintenance by updating the parameter *Maintenance* to `ENABLED`.
 .. Open the https://console.aws.amazon.com/systems-manager/[AWS Systems Manager (SSM) console^].
-.. Select the AWS region where the quick start is created.
+.. Select the AWS region where the Partner Solution is created.
 .. In the navigation pane, choose *Parameter Store*. If the AWS Systems Manager home page opens first, choose the menu icon to open the navigation pane, and then choose Parameter Store.
 .. Select the parameter *Maintenance* to drill into its properties.
 .. Click on the *Edit* button in the upper right corner of the page.
