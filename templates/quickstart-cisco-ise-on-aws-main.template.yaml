@@ -111,7 +111,7 @@ Metadata:
       QSS3KeyPrefix:
         default: Quick Start S3 key prefix
       EmailSubscription:
-        default: Email address
+        default: Email distribution list
       ERSapi:
         default: ERS
       OpenAPI:

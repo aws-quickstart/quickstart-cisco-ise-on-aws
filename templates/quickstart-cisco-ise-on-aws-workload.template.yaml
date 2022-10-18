@@ -91,7 +91,7 @@ Metadata:
       ISEVersion:
         default: ISE version
       EmailSubscription:
-        default: Email address
+        default: Email distribution list
       EBSEncrypt:
         default: EBS encryption
       StorageSize:
