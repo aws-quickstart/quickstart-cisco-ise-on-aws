@@ -1,6 +1,6 @@
 //Add any unique troubleshooting steps here.
 
-For troubleshooting common Partner Solution issues, refer to the https://fwd.aws/rA69w?[AWS Quick Start General Information Guide^] and https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/troubleshooting.html[Troubleshooting CloudFormation^].
+For troubleshooting common Partner Solution issues, refer to the https://fwd.aws/rA69w?[AWS Partner Solutins General Information Guide^] and https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/troubleshooting.html[Troubleshooting CloudFormation^].
 
 Refer to the following resources for help with these subjects:
 
@@ -34,7 +34,7 @@ image::../docs/deployment_guide/images/DeploymentStateMachine-Failed-0.png[Deplo
 .Deployment State Machine lists 1 *Execution* Failed.
 image::../docs/deployment_guide/images/DeploymentStateMachine-Failed-B.png[DeploymentStateMachine-Failed-B]
 
-*Q.* I encountered a *Failed* event at the _Step_ *Check ISE status* or at the _Choice_ *If ISE is up and running* in the Deployment State Machine for {partner-product-short-name} on AWS.
+*Q.* I encountered a *Failed* event at the _Step_ *Check ISE status* or at the _Choice_ *If ISE is up and running* in the deployment state machine for {partner-product-short-name} on AWS.
 
 *A.* This is due to networking issues. Please verify the existing VPC meets the requirements:
 
@@ -60,22 +60,22 @@ START RequestId: 1927bbcc-dd60-48b6-97cc-d2ca936a2114 Version: $LATEST
 [INFO]	2022-10-09T03:44:10.148Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	Secondary Polcy Administration node fqdn : ise-aws2.oh-demo.local
 /opt/python/urllib3/connectionpool.py:1045: InsecureRequestWarning: Unverified HTTPS request is being made to host '10.7.1.138'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/1.26.x/advanced-usage.html#ssl-warnings
 warnings.warn(
-[INFO]	2022-10-09T03:44:10.439Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	API response for 10.7.1.138 is 
+[INFO]	2022-10-09T03:44:10.439Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	API response for 10.7.1.138 is
 {
     "message": "An invalid response was received from the server",
     "code": 502
 }
 
- 
+
 /opt/python/urllib3/connectionpool.py:1045: InsecureRequestWarning: Unverified HTTPS request is being made to host '10.7.2.243'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/1.26.x/advanced-usage.html#ssl-warnings
 warnings.warn(
-[INFO]	2022-10-09T03:44:10.721Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	API response for 10.7.2.243 is 
+[INFO]	2022-10-09T03:44:10.721Z	1927bbcc-dd60-48b6-97cc-d2ca936a2114	API response for 10.7.2.243 is
 {
     "message": "An invalid response was received from the server",
     "code": 502
 }
 
- 
+
 END RequestId: 1927bbcc-dd60-48b6-97cc-d2ca936a2114
 REPORT RequestId: 1927bbcc-dd60-48b6-97cc-d2ca936a2114	Duration: 2467.90 ms	Billed Duration: 2468 ms	Memory Size: 128 MB	Max Memory Used: 75 MB	Init Duration: 406.60 ms
 ----
@@ -94,7 +94,7 @@ START RequestId: 97c70b95-8234-4af9-bd98-c605e6123ae1 Version: $LATEST
 [INFO]	2022-10-09T03:56:15.597Z	97c70b95-8234-4af9-bd98-c605e6123ae1	Secondary Polcy Administration node fqdn : ise-aws2.oh-demo.local
 /opt/python/urllib3/connectionpool.py:1045: InsecureRequestWarning: Unverified HTTPS request is being made to host '10.7.1.138'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/1.26.x/advanced-usage.html#ssl-warnings
 warnings.warn(
-[INFO]	2022-10-09T03:56:15.929Z	97c70b95-8234-4af9-bd98-c605e6123ae1	API response for 10.7.1.138 is 
+[INFO]	2022-10-09T03:56:15.929Z	97c70b95-8234-4af9-bd98-c605e6123ae1	API response for 10.7.1.138 is
 {
     "response": [
         {
@@ -113,11 +113,11 @@ warnings.warn(
     ],
     "version": "1.0.0"
 }
- 
+
 [INFO]	2022-10-09T03:56:15.930Z	97c70b95-8234-4af9-bd98-c605e6123ae1	ISE - 10.7.1.138 is up and running
 /opt/python/urllib3/connectionpool.py:1045: InsecureRequestWarning: Unverified HTTPS request is being made to host '10.7.2.243'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/1.26.x/advanced-usage.html#ssl-warnings
 warnings.warn(
-[INFO]	2022-10-09T03:56:17.101Z	97c70b95-8234-4af9-bd98-c605e6123ae1	API response for 10.7.2.243 is 
+[INFO]	2022-10-09T03:56:17.101Z	97c70b95-8234-4af9-bd98-c605e6123ae1	API response for 10.7.2.243 is
 {
     "response": [
         {
@@ -136,7 +136,7 @@ warnings.warn(
     ],
     "version": "1.0.0"
 }
- 
+
 [INFO]	2022-10-09T03:56:17.101Z	97c70b95-8234-4af9-bd98-c605e6123ae1	ISE - 10.7.2.243 is up and running
 END RequestId: 97c70b95-8234-4af9-bd98-c605e6123ae1
 REPORT RequestId: 97c70b95-8234-4af9-bd98-c605e6123ae1	Duration: 1942.49 ms	Billed Duration: 1943 ms	Memory Size: 128 MB	Max Memory Used: 77 MB
