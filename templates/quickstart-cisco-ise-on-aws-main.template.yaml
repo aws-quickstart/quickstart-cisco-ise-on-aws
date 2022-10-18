@@ -111,7 +111,7 @@ Metadata:
       QSS3KeyPrefix:
         default: Quick Start S3 key prefix
       EmailSubscription:
-        default: Email distribution list
+        default: Email address
       ERSapi:
         default: ERS
       OpenAPI:
@@ -244,7 +244,7 @@ Parameters:
       - '3.2'
     Default: '3.1'
   EmailSubscription:
-    Description: Email list which will be notified about the deployment health and failover status.
+    Description: Email address to receive deployment health and failover status notifications.
     Type: String
   EBSEncrypt:
     Description: Choose "true" to enable EBS encryption.
