@@ -731,7 +731,7 @@ Parameters:
       - WET
   password:
     Description: >-
-      Password for the default administrator user, used to access the Cisco ISE console. Must contain 6-25 characters and contain at least one number, uppercase letter, and lowercase letter. Valid characters: A-Z, a-z, 0-9, and . , + = @ ~ ! _ - (hyphen). Do not use user name ("admin") or reverse user name ("nimda"). User names for ISE 3.1 and 3.2+ are "admin" and "iseadmin", respectively. Cannot contain "cisco" or "ocsic". Warning: This password displays in plaintext on the Edit user data page in the Amazon EC2 console.
+      Password for the default administrator user, used to access the Cisco ISE GUI. Password must align with Cisco ISE password policy. Must contain 6-25 characters and contain at least one number, uppercase letter, and lowercase letter. Valid characters: A-Z, a-z, 0-9, and . , + = @ ~ ! _ - (hyphen). Do not use user name ("admin") or reverse user name ("nimda"). User names for ISE 3.1 and 3.2+ are "admin" and "iseadmin", respectively. Cannot contain "cisco" or "ocsic". Warning: This password displays in plaintext on the Edit user data page in the Amazon EC2 console.
     NoEcho: 'True'
     Type: String
     AllowedPattern: >-
