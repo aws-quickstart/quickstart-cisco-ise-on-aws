@@ -121,7 +121,7 @@ Metadata:
       QSS3KeyPrefix:
         default: Quick Start S3 key prefix
       AutoFailover:
-        default: Automatic fail over
+        default: Automatic failover
       FailoverRate:
         default: Failover rate
       HealthcheckRate:

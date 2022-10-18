@@ -101,7 +101,7 @@ Metadata:
       FailoverRate:
         default: Failover rate
       AutoFailover:
-        default: Automatic fail over
+        default: Automatic failover
       HealthcheckRate:
         default: Health check rate
       QSS3BucketName:
