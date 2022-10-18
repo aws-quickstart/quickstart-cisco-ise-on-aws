@@ -244,7 +244,7 @@ Parameters:
       - '3.2'
     Default: '3.1'
   EmailSubscription:
-    Description: List of subscriber email addresses for deployment health and failover status notifications.
+    Description: Email list which will be notified about the deployment health and failover status.
     Type: String
   EBSEncrypt:
     Description: Choose "true" to enable EBS encryption.
