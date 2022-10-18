@@ -24,16 +24,16 @@ best practices, to provide you with your own virtual network on AWS.
 // Add bullet points for any additional components that are included in the deployment. Ensure that the additional components are shown in the architecture diagram. End each bullet with a period.
 
 * AWS Route53 for DNS resolution between the two {partner-product-short-name} instances.
-* AWS Lambda functions for healthcheck, deployment and failover between the two {partner-product-short-name} instances.
-* Amazon Step Functions State Machines for deployment and failover between the two {partner-product-short-name} instances.
+* AWS Lambda functions for health check, deployment, and failover between the two {partner-product-short-name} instances.
+* Amazon Step Functions state machines for deployment and failover between the two {partner-product-short-name} instances.
 * AWS Systems Manager (SSM) Parameter Store for storing state information about the two {partner-product-short-name} instances.
 * Amazon CloudWatch for logging and generating events about the two {partner-product-short-name} instances.
-* Amazon EventBridge rules for triggering Amazon Step Function State Machine executions.
-* Amazon Simple Notification Service (SNS) for email-notifications related to:
+* Amazon EventBridge rules for invoking the Amazon Step Function state machine.
+* Amazon Simple Notification Service (SNS) for email notifications related to:
 ** forming a two-node {partner-product-short-name} deployment,
 ** performing health check on the {partner-product-short-name} deployment, and
 ** monitoring the {partner-product-short-name} instances and to automate Policy Administration Node (PAN) fail over.
 
 [.small]#* The template that deploys this Partner Solution into an existing VPC skips the components marked by asterisks and prompts you for your existing VPC configuration.#
 
-NOTE: For details about the deployment and failover State Machines and state persistence using the Parameter Store, refer to the https://aws-quickstart.github.io/quickstart-cisco-ise-on-aws/operational/[operational guide^] for details.
+NOTE: For details about deployment and failover state machines and state persistence using Parameter Store, refer to the https://aws-quickstart.github.io/quickstart-cisco-ise-on-aws/operational/[Cisco ISE on AWS Operational Guide^].
