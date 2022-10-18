@@ -244,7 +244,7 @@ Parameters:
       - '3.2'
     Default: '3.1'
   EmailSubscription:
-    Description: List of subscriber email addresses to receive deployment health and failover status notifications.
+    Description: List of subscriber email addresses for deployment health and failover status notifications.
     Type: String
   EBSEncrypt:
     Description: Choose "true" to enable EBS encryption.
@@ -731,13 +731,13 @@ Parameters:
       - WET
   password:
     Description: >-
-      Password for the default administrator user, used to access the Cisco ISE console. Must contain 6-25 characters and contain at least one number, uppercase letter, and lowercase letter. Valid characters: A-Z, a-z, 0-9, and . , + = @ ~ ! _ - (hyphen). Cannot be same as user name ("admin") or reverse user name ("nimda"). Cannot contain "cisco" or "ocsic". Warning: This password displays in plaintext on the Edit user data page in the Amazon EC2 console. Note: User names for ISE 3.1 and 3.2+ are "admin" and "iseadmin", respectively.
+      Password for the default administrator user, used to access the Cisco ISE console. Must contain 6-25 characters and contain at least one number, uppercase letter, and lowercase letter. Valid characters: A-Z, a-z, 0-9, and . , + = @ ~ ! _ - (hyphen). Do not use user name ("admin") or reverse user name ("nimda"). User names for ISE 3.1 and 3.2+ are "admin" and "iseadmin", respectively. Cannot contain "cisco" or "ocsic". Warning: This password displays in plaintext on the Edit user data page in the Amazon EC2 console.
     NoEcho: 'True'
     Type: String
     AllowedPattern: >-
       ^(?=.*?[A-Z])(?=.*?[a-z])(?i)(?!.*?admin|.*?cisco|.*?nimda|.*?ocsic)(?-i)(?=.*?[0-9]).{6,}$
     ConstraintDescription: >-
-      Minimum of six characters. One digit, one uppercase, and one lowercase letter required. Cannot be same as user name ("admin") or reverse user name ("nimda"). Cannot contain "cisco" or "ocsic".
+      Minimum of six characters. One digit, one uppercase, and one lowercase letter required. Do not use user name ("admin") or reverse user name ("nimda"). Cannot contain "cisco" or "ocsic".
   ConfirmPwd:
     Description: Confirm password.
     NoEcho: 'True'
