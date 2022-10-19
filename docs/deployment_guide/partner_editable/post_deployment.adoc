@@ -21,7 +21,7 @@ Enable maintenance mode to avoid false alarms and accidentally invoking Primary 
 === Change the {partner-product-short-name} administrator user password
 {partner-product-short-name} 3.2 requires you to reset the administrator user password after initial setup. After deployment, change the administrator user password in the {partner-product-short-name} console. For more information, refer to https://www.cisco.com/c/en/us/td/docs/security/ise/3-2/admin_guide/b_ise_admin_3_2/b_ISE_admin_32_overview.html#concept_7642DD36C0DD424CA423615BF013D0B9[Administrative Access to {partner-product-short-name}^].
 
-NOTE: For AWS deployments, the initial {partner-product-short-name} administrator user name is `admin` in {partner-product-short-name} 3.1 and `iseadmin` in {partner-product-short-name} 3.2.
+NOTE: For AWS deployments, initial user names for Cisco ISE 3.1 and 3.2+ are `admin` and `iseadmin`, respectively.
 
 === Update the administrator password in the Systems Manager console
 AWS CloudFormation does not support defining template parameters as `SecureString` Systems Manager parameter types. After changing the {partner-product-short-name} administrator user password, update the `ADMIN_PASSWORD` parameter in Parameter Store with the new password.
