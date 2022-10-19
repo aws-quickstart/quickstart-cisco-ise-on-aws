@@ -1,24 +1,42 @@
 // Include any postdeployment steps here, such as steps necessary to test that the deployment was successful. If there are no postdeployment steps, leave this file empty.
 
 == Postdeployment steps
-After deployment, you must do the following:
+After deployment, you must confirm the Amazon SNS subscription, enable maintenance mode, and change the administrator password.
 
-. Confirm Amazon SNS subscription: This Partner Solution configures a subscription to an SNS topic called `NotifyAdminTopic`. During deployment, you specify an email address to receive notifications in the `EmailSubscription` template parameter. After deployment, Amazon SNS sends an email with the subject *AWS Notification - Subscription Confirmation* to the specified address. Choose the *Confirm subscription* link in the email to confirm the subscription.
-. Enable maintenance mode: To avoid false alarms and accidentally invoking Primary Administration Node (PAN) failover, put the deployment in maintenance mode by updating the *Maintenance* parameter to `ENABLED`.
-.. Open the https://console.aws.amazon.com/systems-manager/[Systems Manager console^].
-.. On the top toolbar, choose AWS Region where the Partner Solution is deployed.
-.. In the left navigation pane, choose *Parameter Store*.
-.. Choose the *Maintenance* parameter.
-.. Choose *Edit*.
-.. On the *Edit parameter page*, for *Value*, enter `ENABLED`.
-.. Choose *Save changes*.
+=== Confirm Amazon SNS subscription
 
-. Update *ADMIN_PASSWORD*:
-AWS CloudFormation does not support the ability to store SSM parameters as securestring and, starting from Release 3.2, {partner-product-short-name} requires to reset the admin password after the initial setup. Consequently, you must reset the default admin user's password from the {partner-product-short-name} administrative web console and then manually update the SSM admin password parameter via the AWS cli or console.
-.. Change the password of the {partner-product-short-name} admin user in {partner-product-short-name} adminstrative web console. For detailed instructions, see https://www.cisco.com/c/en/us/td/docs/security/ise/3-2/admin_guide/b_ise_admin_3_2/b_ISE_admin_32_overview.html#concept_7642DD36C0DD424CA423615BF013D0B9[Administrative Access to {partner-product-short-name}^].
-+
-NOTE: For AWS deployments, the initial {partner-product-short-name} admin user name is `admin` in {partner-product-short-name} 3.1 and `iseadmin` in {partner-product-short-name} 3.2.
-+
+This Partner Solution configures a subscription to an SNS topic called `NotifyAdminTopic`. During deployment, you specify an email address to receive notifications in the `EmailSubscription` template parameter. After deployment, Amazon SNS sends an email with the subject *AWS Notification - Subscription Confirmation* to the specified address. Choose the *Confirm subscription* link in the email to confirm the subscription.
+
+=== Enable maintenance mode
+Enable maintenance mode to avoid false alarms and accidentally invoking Primary Administration Node (PAN) failover.
+
+. Open the https://console.aws.amazon.com/systems-manager/[Systems Manager console^].
+. On the top toolbar, choose AWS Region where the Partner Solution is deployed.
+. In the left navigation pane, choose *Parameter Store*.
+. Choose the *Maintenance* parameter.
+. Choose *Edit*.
+. On the *Edit parameter page*, for *Value*, enter `ENABLED`.
+. Choose *Save changes*.
+
+=== Change the {partner-product-short-name} administrator user password
+{partner-product-short-name} 3.2 requires you to reset the administrator user password after initial setup. After deployment, change the administrator user password in the {partner-product-short-name} console. For more information, refer to https://www.cisco.com/c/en/us/td/docs/security/ise/3-2/admin_guide/b_ise_admin_3_2/b_ISE_admin_32_overview.html#concept_7642DD36C0DD424CA423615BF013D0B9[Administrative Access to {partner-product-short-name}^].
+
+NOTE: For AWS deployments, the initial {partner-product-short-name} administrator user name is `admin` in {partner-product-short-name} 3.1 and `iseadmin` in {partner-product-short-name} 3.2.
+
+=== Update the administrator password in the Systems Manager console
+AWS CloudFormation does not support defining template parameters as `SecureString` Systems Manager parameter types. After changing the {partner-product-short-name} administrator user password, update the `ADMIN_PASSWORD` parameter in Parameter Store with the new password.
+
+. Open the https://console.aws.amazon.com/systems-manager/[Systems Manager console^].
+. On the top toolbar, choose AWS Region where the Partner Solution is deployed.
+. In the left navigation pane, choose *Parameter Store*.
+. Choose the *ADMIN_PASSWORD* parameter.
+. Choose *Edit*.
+. On the *Edit parameter page*, for *Value*, enter the {partner-product-short-name} administrator user password.
+. Choose *Save changes*.
+
+NOTE: You can also edit the parameter using the AWS Command Line Interface (AWS CLI). For more information, refer to https://docs.aws.amazon.com/cli/latest/reference/ssm/put-parameter.html[Put-parameter].
+
+
 .. Update the value of the *ADMIN_PASSWORD* parameter to the new password in the Parameter Store, following the same instructions for the _Maintenance_ parameter.
 +
 TIP: To conform the principle of least privilege, you may create a new {partner-product-short-name} admin user in {partner-product-short-name} administrative web console, assign it to the admin group *ERS_ADMIN*, and replace the values of the SSM parameters *ADMIN_USERNAME* and *ADMIN_PASSWORD* with this new admin user's data.
