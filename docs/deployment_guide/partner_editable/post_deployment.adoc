@@ -3,15 +3,15 @@
 == Postdeployment steps
 After deployment, you must do the following:
 
-. Confirm subscription: SNS sends an email with the subject *AWS Notification - Subscription Confirmation* to the email address entered as *EmailSubscription* parameter in the template. Please click the link to confirm subscription to the topic *NotifyAdminTopic* so that SNS can notify you any messages on the topic.
-. Enter Maintenance mode: In order to avoid false alarms and accidentally trigger PAN failover, put the deployment in maintenance by updating the parameter *Maintenance* to `ENABLED`.
-.. Open the https://console.aws.amazon.com/systems-manager/[AWS Systems Manager (SSM) console^].
-.. Select the AWS region where the Partner Solution is created.
-.. In the navigation pane, choose *Parameter Store*. If the AWS Systems Manager home page opens first, choose the menu icon to open the navigation pane, and then choose Parameter Store.
-.. Select the parameter *Maintenance* to drill into its properties.
-.. Click on the *Edit* button in the upper right corner of the page.
-.. In the Value text box, replace the exiting text with `ENABLED`.
-.. Click on the *Save changes* button.
+. Confirm Amazon SNS subscription: This Partner Solution configures a subscription to an SNS topic called `NotifyAdminTopic`. During deployment, you specify an email address to receive notifications in the `EmailSubscription` template parameter. After deployment, Amazon SNS sends an email with the subject *AWS Notification - Subscription Confirmation* to the specified address. Choose the *Confirm subscription* link in the email to confirm the subscription.
+. Enable maintenance mode: To avoid false alarms and accidentally invoking Primary Administration Node (PAN) failover, put the deployment in maintenance mode by updating the *Maintenance* parameter to `ENABLED`.
+.. Open the https://console.aws.amazon.com/systems-manager/[Systems Manager console^].
+.. On the top toolbar, choose AWS Region where the Partner Solution is deployed.
+.. In the left navigation pane, choose *Parameter Store*.
+.. Choose the *Maintenance* parameter.
+.. Choose *Edit*.
+.. On the *Edit parameter page*, for *Value*, enter `ENABLED`.
+.. Choose *Save changes*.
 
 . Update *ADMIN_PASSWORD*:
 AWS CloudFormation does not support the ability to store SSM parameters as securestring and, starting from Release 3.2, {partner-product-short-name} requires to reset the admin password after the initial setup. Consequently, you must reset the default admin user's password from the {partner-product-short-name} administrative web console and then manually update the SSM admin password parameter via the AWS cli or console.
