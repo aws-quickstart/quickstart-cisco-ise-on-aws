@@ -17,7 +17,7 @@ As shown in <<architecture1>>, this Partner Solution sets up the following:
 * In the public subnets, managed network address translation (NAT) gateways to allow outbound internet access for resources in the private subnets.
 * In the private subnets:
 ** One {partner-product-short-name} primary and one {partner-product-short-name} secondary node deployed to Amazon Elastic Compute Cloud (Amazon EC2) instances.
-** A Network Load Balancer (NLB) attached to the private subnets. The load balancer distributes Remote Authentication Dial-In User Service (RADIUS) and Terminal Access Controller Access-Control System Plus (TACACS+) requests among the ISE nodes.
+** A Network Load Balancer (NLB) attached to the private subnets. The load balancer distributes Remote Authentication Dial-In User Service (RADIUS) and Terminal Access Controller Access-Control System Plus (TACACS+) requests among {partner-product-short-name} nodes.
 * Amazon Route 53 for Domain Name Service (DNS) resolution between {partner-product-short-name} instances.
 * AWS Lambda for health checks, deployment, and failover of {partner-product-short-name} instances.
 * AWS Step Functions for state machines to deploy and manage failover of Cisco ISE instances.
