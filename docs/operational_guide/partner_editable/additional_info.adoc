@@ -1,16 +1,16 @@
-== Deployment State Machine
+== Deployment state machine
 [#architecture2]
-.Partner Solution Deployment State Machine architecture for {partner-product-short-name} on AWS
+.Partner Solution deployment state machine architecture for {partner-product-short-name} on AWS
 image::../docs/deployment_guide/images/quickstart-cisco-ise-on-aws-architecture-DeploymentStateMachine.png[DeploymentStateMachineArchitecture]
 
-As shown in <<architecture2>>, this Partner Solution Deployment State Machine performs the following steps to form a two-node {partner-product-short-name} deployment:
+As shown in <<architecture2>>, this Partner Solution deployment state machine performs the following steps to form a two-node {partner-product-short-name} deployment:
 
-. Check {partner-product-short-name} status: _Verify both {partner-product-short-name} instances are up and ready._
-. Set Primary PAN: _Make the first {partner-product-short-name} instance as the primary admin node (primary PAN or PPAN) of a new {partner-product-short-name} deployment._
-. Register Secondary Node: _Register the second {partner-product-short-name} instance as the secondary admin node (secondary PAN or SPAN) into the same {partner-product-short-name} deployment._
-. Check Sync Status: _Check the deployment status and verify that SPAN has synchronized to SPAN._
+. Checks {partner-product-short-name} status: _Verify both {partner-product-short-name} instances are up and ready._
+. Sets Primary PAN: _Make the first {partner-product-short-name} instance as the primary admin node (primary PAN or PPAN) of a new {partner-product-short-name} deployment._
+. Registers Secondary Node: _Register the second {partner-product-short-name} instance as the secondary admin node (secondary PAN or SPAN) into the same {partner-product-short-name} deployment._
+. Checks Sync Status: _Check the deployment status and verify that SPAN has synchronized to SPAN._
 
-NOTE: CloudFormation executes this Partner Solution Deployment State Machine towards the end of the stack creation.
+NOTE: CloudFormation deploys the state machine architecture towards the end of the stack creation.
 
 == PAN Failover State Machine
 [#architecture3]
