@@ -29,18 +29,18 @@ As shown in <<architecture3>>, this Partner Solution deploys a failover state ma
 During deployment, if you set the Auto Failover (`AutoFailover`) parameter to `ENABLED`, the deployment schedules the failover state machine to run periodically as an https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-rules.html[Amazon EventBridge rule^]. The deployment sets `AutoFailover` to `DISABLED` by default in the templates, because there are only two {partner-product-short-name} nodes and auto failover can result in a 30-minute downtime while services are restarted.
 
 == Parameter Store
-This Partner Solution stores the following configurable parameters in https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html[AWS Systems Manager Parameter Store^].
+This Partner Solution stores its configurable parameters in https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html[AWS Systems Manager Parameter Store^]. The parameters are:
 
 [%autowidth]
 |===
 |Name |Description
 
-|`ADMIN_PASSWORD` | {partner-product-short-name} administrator user password used by Lambda for Extensible RESTful Services (ERS)/OpenAPI requests.
-|`ADMIN_USERNAME` |{partner-product-short-name} administrator user name used by Lambda for ERS/OpenAPI requests.
-|`Maintenance` |Allowed values are `DISABLED` (default) and `ENABLED`. When `ENABLED`, Lambda skips health checks and PAN failover.
-|`Primary_FQDN` |Fully qualified domain name (FQDN) of PPAN.
-|`Primary_IP` |IPv4 address of PPAN.
-|`Secondary_FQDN` |FQDN of SPAN.
-|`Secondary_IP` |IPv4 address of SPAN.
-|`SyncStatus` |Latest synchronization status of the {partner-product-short-name} deployment from the last health check.
+|ADMIN_PASSWORD |_The password of the {partner-product-short-name} Admin User used by Lambda for ERS/OpenAPI requests._
+|ADMIN_USERNAME |_The username of the {partner-product-short-name} Admin User used by Lambda for ERS/OpenAPI requests._
+|Maintenance |_The allowed values are `DISABLED` (default) and `ENABLED`. When `ENABLED`, Lambda will skip health checks and PAN failover._
+|Primary_FQDN |_The fully qualified domain name (FQDN) of PPAN._
+|Primary_IP |_The IPv4 address of PPAN._
+|Secondary_FQDN |_The FQDN of SPAN._
+|Secondary_IP |_The IPv4 address of SPAN._
+|SyncStatus |_The latest synchronization status of the {partner-product-short-name} deployment from the last health check._
 |===
