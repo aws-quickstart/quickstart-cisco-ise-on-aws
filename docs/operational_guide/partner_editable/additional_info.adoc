@@ -5,10 +5,10 @@ image::../docs/deployment_guide/images/quickstart-cisco-ise-on-aws-architecture-
 
 As shown in <<architecture2>>, this Partner Solution deployment state machine performs the following steps to form a two-node {partner-product-short-name} deployment:
 
-. Checks {partner-product-short-name} status: _Verify both {partner-product-short-name} instances are up and ready._
-. Sets Primary PAN: _Make the first {partner-product-short-name} instance as the primary admin node (primary PAN or PPAN) of a new {partner-product-short-name} deployment._
-. Registers Secondary Node: _Register the second {partner-product-short-name} instance as the secondary admin node (secondary PAN or SPAN) into the same {partner-product-short-name} deployment._
-. Checks Sync Status: _Check the deployment status and verify that SPAN has synchronized to SPAN._
+. Checks {partner-product-short-name} status to verify that both {partner-product-short-name} instances are up and ready.
+. Sets the first {partner-product-short-name} instance as the primary administrator node (primary PAN or PPAN) of a new {partner-product-short-name} deployment.
+. Registers the second {partner-product-short-name} instance as the secondary administrator node (secondary PAN or SPAN) in the same {partner-product-short-name} deployment.
+. Checks the deployment sync status to verify that SPAN has synchronized to SPAN.
 
 NOTE: CloudFormation deploys the state machine architecture towards the end of the stack creation.
 
