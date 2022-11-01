@@ -1,6 +1,4 @@
-This Partner Solution deploys {partner-product-name} on the AWS Cloud. If you are unfamiliar with AWS Partner Solutions, refer to the https://fwd.aws/rA69w?[AWS Partner Solutions General Information Guide^].
-
-This deployment guide covers the steps necessary to deploy the Quick Start. For more advanced information on the product, troubleshooting, or additional functionality, see the https://aws-quickstart.github.io/quickstart-cisco-ise-on-aws/operational/index.html[{partner-product-name} on AWS Operational guide].
+This Partner Solution deploys {partner-product-name} on the AWS Cloud. This deployment guide covers the steps necessary to deploy the Partner Solution. For more advanced information on the product, troubleshooting, or additional functionality, see the https://aws-quickstart.github.io/quickstart-cisco-ise-on-aws/operational/index.html[{partner-product-name} on AWS Operational guide].
 
 // For advanced information about the product that this Partner Solution deploys, refer to the https://{quickstart-github-org}.github.io/{quickstart-project-name}/operational/index.html[Operational Guide^].
 
