@@ -121,7 +121,7 @@ Metadata:
       QSS3KeyPrefix:
         default: Quick Start S3 key prefix
       AutoFailover:
-        default: Automatic failover
+        default: Auto failover
       FailoverRate:
         default: Failover rate
       HealthcheckRate:
@@ -654,7 +654,7 @@ Parameters:
       - rate(60 minutes)
     Type: String
   AutoFailover:
-    Description: Choose ENABLED to enable auto-failover mechanism.
+    Description: Choose ENABLED to configure the failover state machine to run periodically as an EventBridge rule.
     Type: String
     Default: 'DISABLED'
     AllowedValues:
