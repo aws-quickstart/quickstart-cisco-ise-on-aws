@@ -24,9 +24,9 @@ As shown in <<architecture3>>, this Partner Solution deploys a failover state ma
 . In the event of PPAN failure, promote SPAN to PPAN.
 . Confirm that PAN failover has completed and is successful.
 
-.AutoFailover
-****
-NOTE: *AutoFailover* is an input parameter to the CloudFormation stacks. When `ENABLED`, the stacks will schedule this Partner Solution Failover State Machine to run periodically as https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-rules.html[an Amazon EventBridge rule^]. This is `DISABLED` by default in the templates, because there are only two {partner-product-short-name} nodes and because it may incur ~ 30-minute downtime while the services are restarted after PPAN fails and SPAN is promoted to primary.
+== AutoFailover
+
+During deployment, if you set `AutoFailover` to `ENABLED`, the deployment will schedule the failover state machine to run periodically as an https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-rules.html[Amazon EventBridge rule^]. This is `DISABLED` by default in the templates, because there are only two {partner-product-short-name} nodes and because it may incur ~ 30-minute downtime while the services are restarted after PPAN fails and SPAN is promoted to primary.
 ****
 
 == Parameter Store
