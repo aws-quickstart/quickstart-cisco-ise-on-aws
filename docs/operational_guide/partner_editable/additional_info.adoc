@@ -3,12 +3,12 @@
 .Partner Solution deployment state machine architecture for {partner-product-short-name} on AWS
 image::../docs/deployment_guide/images/quickstart-cisco-ise-on-aws-architecture-DeploymentStateMachine.png[DeploymentStateMachineArchitecture]
 
-As shown in <<architecture2>>, this Partner Solution deployment state machine performs the following steps to form a two-node {partner-product-short-name} deployment:
+As shown in <<architecture2>>, this Partner Solution includes a deployment state machine to form a two-node {partner-product-short-name} deployment. The deployment state machine performs the following functions:
 
-. Checks {partner-product-short-name} status to verify that both {partner-product-short-name} instances are up and ready.
-. Sets the first {partner-product-short-name} instance as the primary administrator node (primary PAN or PPAN) of a new {partner-product-short-name} deployment.
-. Registers the second {partner-product-short-name} instance as the secondary administrator node (secondary PAN or SPAN) in the same {partner-product-short-name} deployment.
-. Checks the deployment sync status to verify that SPAN has synchronized to SPAN.
+. Check {partner-product-short-name} status to verify that both {partner-product-short-name} instances are up and ready.
+. Set the first {partner-product-short-name} instance as the primary administrator node (primary PAN or PPAN) of a new {partner-product-short-name} deployment.
+. Register the second {partner-product-short-name} instance as the secondary administrator node (secondary PAN or SPAN) in the same {partner-product-short-name} deployment.
+. Check the deployment sync status to verify that both nodes are synchronized.
 
 NOTE: CloudFormation deploys the state machine architecture towards the end of the stack creation.
 
@@ -17,12 +17,12 @@ NOTE: CloudFormation deploys the state machine architecture towards the end of t
 .Partner Solution Failover State Machine architecture for {partner-product-short-name} on AWS
 image::../docs/deployment_guide/images/quickstart-cisco-ise-on-aws-architecture-FailoverStateMachine.png[FailoverStateMachineArchitecture]
 
-When PPAN fails, we need promote SPAN as primary to re-gain access to the Cisco administrative web console and to allow certain aspects of {partner-product-short-name} services to continue to work. As shown in <<architecture3>>, this Partner Solution Failover State Machine performs the following steps to detect PPAN failures and to promote SPAN to primary:
+As shown in <<architecture3>>, this Partner Solution deploys a failover state machine to promote SPAN to PPAN in the event of a PPAN failure. Failover keeps access to the Cisco web console open and enables certain aspects of {partner-product-short-name} to continue running. The failover state machine performs the following functions:
 
-. Check PPAN Status: _Detect PPAN failures._
-. Check SPAN Getway Status: _Verify whether the API gateway on SPAN is accessible._
-. Perform Failover: _Promote SPAN to PPAN._
-. Check Failover Successful: _Confirm the PAN failover has completed and is successful._
+. Detect PPAN failures.
+. Verify accessibility of the API gateway on SPAN.
+. In the event of PPAN failure, promote SPAN to PPAN.
+. Confirm that PAN failover has completed and is successful.
 
 .AutoFailover
 ****
