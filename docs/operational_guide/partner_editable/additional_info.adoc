@@ -26,7 +26,7 @@ As shown in <<architecture3>>, this Partner Solution deploys a failover state ma
 . In the event of PPAN failure, promote SPAN to PPAN.
 . Confirm that PAN failover has completed and is successful.
 
-== AutoFailover
+== Auto failover
 
 If you set the Auto Failover (`AutoFailover`) parameter to `ENABLED`, the deployment schedules the failover state machine to run periodically as an https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-rules.html[Amazon EventBridge rule^].
 
@@ -40,8 +40,8 @@ This Partner Solution stores the following configurable parameters in https://do
 |Name |Description
 
 |`ADMIN_PASSWORD` | {partner-product-short-name} admin password used by Lambda for Extensible RESTful Services (ERS)/OpenAPI requests.
-|`ADMIN_USERNAME` |{partner-product-short-name} admin name used by Lambda for ERS/OpenAPI requests.
-|`Maintenance` |Allowed values are `DISABLED` (default) and `ENABLED`. When `ENABLED`, Lambda skips health checks and PAN failover.
+|`ADMIN_USERNAME` |{partner-product-short-name} admin user name used by Lambda for ERS/OpenAPI requests.
+|`Maintenance` |Values are `DISABLED` (default) or `ENABLED`. When `ENABLED`, Lambda skips health checks and PAN failover.
 |`Primary_FQDN` |Fully qualified domain name (FQDN) of PPAN.
 |`Primary_IP` |IPv4 address of PPAN.
 |`Secondary_FQDN` |FQDN of SPAN.

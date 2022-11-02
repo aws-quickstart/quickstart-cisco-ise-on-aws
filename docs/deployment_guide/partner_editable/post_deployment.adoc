@@ -9,9 +9,9 @@ After deployment, you must complete the following steps.
 
 <<Step 3: Change the {partner-product-short-name} admin password>>.
 
-<<Step 4: Update the administrator password in the Systems Manager console>>.
+<<Step 4: Update the admin password in the Systems Manager console>>.
 
-<<Step 5: Enable Amazon API gateway for the secondary Cisco ISE node>>.
+<<Step 5: Enable Amazon API Gateway for the secondary Cisco ISE node>>.
 <<Step 6: Install the latest ISE release patch>>.
 
 <<Step 7: Backup {partner-product-short-name} internal CA chains>>.
@@ -20,32 +20,32 @@ After deployment, you must complete the following steps.
 
 
 === Step 1: Confirm Amazon SNS subscription
-This Partner Solution configures a subscription to an SNS topic called `NotifyAdminTopic`. During deployment, you specify an email address to receive notifications in the `EmailSubscription` template parameter. After deployment, Amazon SNS sends an email with the subject *AWS Notification - Subscription Confirmation* to the specified address. Choose the *Confirm subscription* link in the email to confirm the subscription.
+This Partner Solution configures a subscription to an SNS topic called `NotifyAdminTopic`. During deployment, you specify an email address to receive notifications in the `EmailSubscription` template parameter. After deployment, Amazon SNS sends an email with the subject *AWS Notification - Subscription Confirmation* to the specified address. To confirm the subscription, choose *Confirm subscription* in the email.
 
 === Step 2: Enable maintenance mode
-Before continuing with Steps 2-7, enable maintenance mode. to avoid false alarms and accidentally invoking Primary Administration Node (PAN) failover.
+Before continuing with Steps 2–7, enable maintenance mode to avoid false alarms and accidentally invoking PAN failover.
 
 . Open the https://console.aws.amazon.com/systems-manager/[Systems Manager console^].
 . On the top toolbar, choose AWS Region where the Partner Solution is deployed.
-. In the left navigation pane, choose *Parameter Store*.
+. In the navigation pane, choose *Parameter Store*.
 . Choose the *Maintenance* parameter.
 . Choose *Edit*.
 . On the *Edit parameter page*, for *Value*, enter `ENABLED`.
 . Choose *Save changes*.
 
-NOTE: After completing Steps 2-7, <<Step 8: Disable maintenance mode, disable maintenance mode>>.
+NOTE: After completing Steps 2–7, <<Step 8: Disable maintenance mode, disable maintenance mode>>.
 
 === Step 3: Change the {partner-product-short-name} admin password
 {partner-product-short-name} 3.2 requires you to reset the admin password after initial setup. After deployment, change the admin password in the {partner-product-short-name} console. For more information, refer to https://www.cisco.com/c/en/us/td/docs/security/ise/3-2/admin_guide/b_ise_admin_3_2/b_ISE_admin_32_overview.html#concept_7642DD36C0DD424CA423615BF013D0B9[Administrative Access to {partner-product-short-name}^].
 
 NOTE: For AWS deployments, initial user names for Cisco ISE 3.1 and 3.2+ are `admin` and `iseadmin`, respectively.
 
-=== Step 4: Update the administrator password in the Systems Manager console
+=== Step 4: Update the admin password in the Systems Manager console
 AWS CloudFormation does not support defining template parameters as `SecureString` Systems Manager parameter types. After changing the {partner-product-short-name} admin password, update the `ADMIN_PASSWORD` parameter in Parameter Store with the new password.
 
 . Open the https://console.aws.amazon.com/systems-manager/[Systems Manager console^].
 . On the top toolbar, choose AWS Region where the Partner Solution is deployed.
-. In the left navigation pane, choose *Parameter Store*.
+. In the navigation pane, choose *Parameter Store*.
 . Choose the *ADMIN_PASSWORD* parameter.
 . Choose *Edit*.
 . On the *Edit parameter page*, for *Value*, enter the {partner-product-short-name} admin password.
@@ -53,10 +53,14 @@ AWS CloudFormation does not support defining template parameters as `SecureStrin
 
 NOTE: You can also edit the parameter using the AWS Command Line Interface (AWS CLI). For more information, refer to https://docs.aws.amazon.com/cli/latest/reference/ssm/put-parameter.html[Put-parameter^].
 
-TIP: To conform the principle of least privilege, you can create a new {partner-product-short-name} admin in the {partner-product-short-name} console, assign it to the admin group *ERS_ADMIN*, and update the values of the SSM parameters *ADMIN_USERNAME* and *ADMIN_PASSWORD* with the new admin credentials.
+To conform the principle of least privilege, do the following:
 
-=== Step 5: Enable Amazon API gateway for the secondary Cisco ISE node
-To use AWS Lambda for PAN failover, enable API gateway for the secondary ISE node. For more information, refer to https://developer.cisco.com/docs/identity-services-engine/latest/#!cisco-ise-api-framework/cisco-ise-api-gateway[{partner-product-short-name} API Gateway^].
+. Create a new {partner-product-short-name} admin in the {partner-product-short-name} consolee
+. Assign the new admin to the admin group `ERS_ADMIN`.
+. Update the values of the SSM parameters `ADMIN_USERNAME` and `ADMIN_PASSWORD` with the new admin credentials.
+
+=== Step 5: Enable Amazon API Gateway for the secondary Cisco ISE node
+To use AWS Lambda for PAN failover, enable API Gateway for the secondary ISE node. For more information, refer to https://developer.cisco.com/docs/identity-services-engine/latest/#!cisco-ise-api-framework/cisco-ise-api-gateway[{partner-product-short-name} API Gateway^].
 
 === Step 6: Install the latest ISE release patch
 Update the Cisco ISE nodes with the latest Cisco ISE patch release. For more information, refer to http://cs.co/ise-rn[Release Notes^].
