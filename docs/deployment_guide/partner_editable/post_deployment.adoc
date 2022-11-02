@@ -55,7 +55,7 @@ NOTE: You can also edit the parameter using the AWS Command Line Interface (AWS 
 
 To conform the principle of least privilege, do the following:
 
-. Create a new {partner-product-short-name} admin in the {partner-product-short-name} consolee
+. Create a new {partner-product-short-name} admin in the {partner-product-short-name} console
 . Assign the new admin to the admin group `ERS_ADMIN`.
 . Update the values of the SSM parameters `ADMIN_USERNAME` and `ADMIN_PASSWORD` with the new admin credentials.
 
