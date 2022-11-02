@@ -1,6 +1,8 @@
+:xrefstyle: short
+
 == Deployment state machine
 [#architecture2]
-.Partner Solution deployment state machine architecture for {partner-product-short-name} on AWS
+.Deployment state machine architecture for {partner-product-short-name} on AWS
 image::../docs/deployment_guide/images/quickstart-cisco-ise-on-aws-architecture-DeploymentStateMachine.png[DeploymentStateMachineArchitecture]
 
 As shown in <<architecture2>>, this Partner Solution includes a deployment state machine to form a two-node {partner-product-short-name} deployment. The deployment state machine performs the following functions:
@@ -12,21 +14,23 @@ As shown in <<architecture2>>, this Partner Solution includes a deployment state
 
 NOTE: CloudFormation deploys the state machine architecture towards the end of the stack creation.
 
-== PAN Failover State Machine
+== PAN failover state machine
 [#architecture3]
-.Partner Solution Failover State Machine architecture for {partner-product-short-name} on AWS
+.Failover state machine architecture for {partner-product-short-name} on AWS
 image::../docs/deployment_guide/images/quickstart-cisco-ise-on-aws-architecture-FailoverStateMachine.png[FailoverStateMachineArchitecture]
 
 As shown in <<architecture3>>, this Partner Solution deploys a failover state machine to promote SPAN to PPAN in the event of a PPAN failure. Failover keeps access to the Cisco web console open and enables certain aspects of {partner-product-short-name} to continue running. The failover state machine performs the following functions:
 
 . Detect PPAN failures.
-. Verify accessibility of the API gateway on SPAN.
+. Verify accessibility of the API Gateway on SPAN.
 . In the event of PPAN failure, promote SPAN to PPAN.
 . Confirm that PAN failover has completed and is successful.
 
 == AutoFailover
 
-During deployment, if you set the Auto Failover (`AutoFailover`) parameter to `ENABLED`, the deployment schedules the failover state machine to run periodically as an https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-rules.html[Amazon EventBridge rule^]. The deployment sets `AutoFailover` to `DISABLED` by default in the templates, because there are only two {partner-product-short-name} nodes and auto failover can result in a 30-minute downtime while services are restarted.
+If you set the Auto Failover (`AutoFailover`) parameter to `ENABLED`, the deployment schedules the failover state machine to run periodically as an https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-rules.html[Amazon EventBridge rule^].
+
+NOTE: The deployment sets `AutoFailover` to `DISABLED` by default in the templates for two reasons. First, the Partner Solution only deploys two {partner-product-short-name} nodes. Second, auto failover can result in a 30-minute downtime while services are restarted.
 
 == Parameter Store
 This Partner Solution stores the following configurable parameters in https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html[AWS Systems Manager Parameter Store^].
@@ -35,11 +39,12 @@ This Partner Solution stores the following configurable parameters in https://do
 |===
 |Name |Description
 
-|`ADMIN_PASSWORD` | {partner-product-short-name} administrator user password used by Lambda for Extensible RESTful Services (ERS)/OpenAPI requests.
-|`ADMIN_USERNAME` |{partner-product-short-name} administrator user name used by Lambda for ERS/OpenAPI requests.
+|`ADMIN_PASSWORD` | {partner-product-short-name} admin password used by Lambda for Extensible RESTful Services (ERS)/OpenAPI requests.
+|`ADMIN_USERNAME` |{partner-product-short-name} admin name used by Lambda for ERS/OpenAPI requests.
 |`Maintenance` |Allowed values are `DISABLED` (default) and `ENABLED`. When `ENABLED`, Lambda skips health checks and PAN failover.
 |`Primary_FQDN` |Fully qualified domain name (FQDN) of PPAN.
 |`Primary_IP` |IPv4 address of PPAN.
 |`Secondary_FQDN` |FQDN of SPAN.
 |`Secondary_IP` |IPv4 address of SPAN.
 |`SyncStatus` |Latest synchronization status of the {partner-product-short-name} deployment from the last health check.
+|===
