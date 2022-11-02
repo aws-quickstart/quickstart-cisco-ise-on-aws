@@ -10,7 +10,7 @@ Refer to the following resources for help with these subjects:
 
 === I encountered a *CREATE_FAILED* error when I launched the Partner Solution.
 
-If AWS CloudFormation fails to create the stack, relaunch the template with *Rollback on failure* set to *Disabled*. This setting is under *Advanced* in the AWS CloudFormation console on the *Configure stack options* page. With this setting, the stack’s state is retained, and the instance keeps running so that you can troubleshoot the issue.
+If AWS CloudFormation fails to create the stack, relaunch the template with *Rollback on failure* set to *Disabled*. This setting is under *Advanced* in the AWS CloudFormation console on the *Configure stack options* page. With this setting, the stack state is retained, and the instance keeps running so that you can troubleshoot the issue.
 
 // Customize this answer if needed. For example, if you’re deploying on Linux instances, either provide the location for log files on Linux or omit the final sentence. If the Quick Start has no EC2 instances, revise accordingly (something like "and the assets keep running").
 
@@ -18,21 +18,31 @@ WARNING: When you set *Rollback on failure* to *Disabled*, you continue to incur
 
 For more information, see https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/troubleshooting.html[Troubleshooting AWS CloudFormation^].
 
-=== I encountered a *CREATE_FAILED* error on `DeploymentWaitCondition` that reads `WaitCondition timed out. Received 0 conditions when expecting 1# after Rollback on failure set to Disabled`.
+=== After setting *Rollback on faiure* to *Disabled*, I encountered a *CREATE_FAILED* error on *DeploymentWaitCondition*.
 
 [#DeploymentWaitCondition-timeout]
 .CREATE_FAILED due to DeploymentWaitCondition timed out.
 image::../docs/deployment_guide/images/DeploymentWaitCondition-timeout.png[DeploymentWaitCondition-timeout]
 
-Go to *Step Functions* > *State machines* > *DeploymentStateMachine*-xxxxxxxxxxxx, drill into the _Failed_ execution, and look for the #Failed# event(s). Click on the *Logs* hyperlink to the CloudWatch log groups and then drill into the log stream whose last event time around the time of the failed event.
+. Open the https://console.aws.amazon.com/states/[Step Functions console^].
+. On the top toolbar, choose AWS Region where the Partner Solution is deployed.
+. In the navigation pane, choose *State machines*.
+. Choose the *DeploymentStateMachine* state machine.
 
++
 [#DeploymentStateMachine-Failed-A]
 .State Machines lists *Deployment State Machine* with 1 Failed.
 image::../docs/deployment_guide/images/DeploymentStateMachine-Failed-0.png[DeploymentStateMachine-Failed-A]
 
+. On the *DeploymentStateMachine* page, on the *Executions* tab, choose the failed execution.
+
++
 [#DeploymentStateMachine-Failed-B]
 .Deployment State Machine lists 1 *Execution* Failed.
 image::../docs/deployment_guide/images/DeploymentStateMachine-Failed-B.png[DeploymentStateMachine-Failed-B]
+
+. On the *Execution* page, for the failed event, choose *Logs*.
+. In the CloudWatch log group, investigate the log stream with a last event time around the time of the failed event.
 
 === I encountered a *Failed* event at the _Step_ *Check ISE status* or at the _Choice_ *If ISE is up and running* in the deployment state machine for {partner-product-short-name} on AWS.
 
