@@ -51,9 +51,9 @@ Networking issues can cause failed events on "Check ISE status" or "If ISE is up
 * Both DNS attributes `enableDnsHostnames` and `enableDnsSupport` are enabled. For more information, refer to https://docs.aws.amazon.com/vpc/latest/userguide/vpc-dns.html#vpc-dns-support[DNS attributes in your VPC^].
 * The private subnets have internet access or https://docs.aws.amazon.com/vpc/latest/privatelink/what-is-privatelink.html[VPC endpoints^] to reach AWS services such as Amazon S3, Systems Manager, and Amazon SNS.
 
-For your reference, below are two samples of expected log events when the step _Check ISE status_ ran without errors and the choice _If ISE is up and running_ was evaluated successfully.
+For your reference, the following are examples of expected log events when `Check ISE status` and `If ISE is up and running` run without errors.
 
-* When neither {partner-product-short-name} node is ready:
+* Log events when neither {partner-product-short-name} node is ready:
 
 [source.small,python]
 ----
@@ -91,7 +91,7 @@ REPORT RequestId: 1927bbcc-dd60-48b6-97cc-d2ca936a2114	Duration: 2467.90 ms	Bill
 ----
 
 
-* When both {partner-product-short-name} nodes are up:
+* Log events when both {partner-product-short-name} nodes are up:
 
 [source.small,python]
 ----
