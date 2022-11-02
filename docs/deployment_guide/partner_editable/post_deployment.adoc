@@ -66,7 +66,11 @@ To use AWS Lambda for PAN failover, enable API Gateway for the secondary ISE nod
 Update the Cisco ISE nodes with the latest Cisco ISE patch release. For more information, refer to http://cs.co/ise-rn[Release Notes^].
 
 === Step 7: Backup {partner-product-short-name} internal CA chains
-This step prepares SPAN to take over PPAN to issue and manage certificates in case that SPAN promoted to primary. https://www.cisco.com/c/en/us/td/docs/security/ise/3-1/admin_guide/b_ise_admin_3_1/b_ISE_admin_31_basic_setup.html#task_E04823B79DCD41EABFAD358D882CE7CA[Export {partner-product-short-name} CA Certificates and Keys^] from the primary ISE node. Then, https://www.cisco.com/c/en/us/td/docs/security/ise/3-1/admin_guide/b_ise_admin_3_1/b_ISE_admin_31_basic_setup.html#task_574F728D24F84475A6099F0D9D3B76B1[Import {partner-product-short-name} CA Certificates and Keys^] into the secondary ISE node.
+To prepare the SPAN to issue and manage certificates in the event of failover, complete the following steps:
+
+. https://www.cisco.com/c/en/us/td/docs/security/ise/3-1/admin_guide/b_ise_admin_3_1/b_ISE_admin_31_basic_setup.html#task_E04823B79DCD41EABFAD358D882CE7CA[Export {partner-product-short-name} CA Certificates and Keys^] from the primary ISE node.
+
+. https://www.cisco.com/c/en/us/td/docs/security/ise/3-1/admin_guide/b_ise_admin_3_1/b_ISE_admin_31_basic_setup.html#task_574F728D24F84475A6099F0D9D3B76B1[Import {partner-product-short-name} CA Certificates and Keys^] into the secondary ISE node.
 
 === Step 8: Disable maintenance mode
 After completing Steps 1-7, disable maintenance mode by resetting the `Maintenance` parameter in Systems Manager to `ENABLED`.
