@@ -1,6 +1,6 @@
 //Add any unique troubleshooting steps here.
 
-For troubleshooting common Partner Solution issues, refer to the https://fwd.aws/rA69w?[AWS Partner Solutins General Information Guide^] and https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/troubleshooting.html[Troubleshooting CloudFormation^].
+For troubleshooting common Partner Solution issues, refer to the https://fwd.aws/rA69w?[AWS Partner Solutions General Information Guide^] and https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/troubleshooting.html[Troubleshooting CloudFormation^].
 
 Refer to the following resources for help with these subjects:
 
@@ -8,9 +8,9 @@ Refer to the following resources for help with these subjects:
 * https://aws.amazon.com/premiumsupport/knowledge-center/ssm-troubleshoot-lambda-internet-access/[How do I troubleshoot internet access issues for an AWS Lambda function that's in an Amazon VPC using AWS Systems Manager?^]
 * https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-serial-console.html[EC2 Serial Console for Linux instances^]
 
-*Q.* I encountered a *CREATE_FAILED* error when I launched the Partner Solution.
+=== I encountered a *CREATE_FAILED* error when I launched the Partner Solution.
 
-*A.* If AWS CloudFormation fails to create the stack, relaunch the template with *Rollback on failure* set to *Disabled*. This setting is under *Advanced* in the AWS CloudFormation console on the *Configure stack options* page. With this setting, the stack’s state is retained, and the instance keeps running so that you can troubleshoot the issue.
+If AWS CloudFormation fails to create the stack, relaunch the template with *Rollback on failure* set to *Disabled*. This setting is under *Advanced* in the AWS CloudFormation console on the *Configure stack options* page. With this setting, the stack’s state is retained, and the instance keeps running so that you can troubleshoot the issue.
 
 // Customize this answer if needed. For example, if you’re deploying on Linux instances, either provide the location for log files on Linux or omit the final sentence. If the Quick Start has no EC2 instances, revise accordingly (something like "and the assets keep running").
 
@@ -18,13 +18,13 @@ WARNING: When you set *Rollback on failure* to *Disabled*, you continue to incur
 
 For more information, see https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/troubleshooting.html[Troubleshooting AWS CloudFormation^].
 
-*Q.* I encountered a *CREATE_FAILED* error on `DeploymentWaitCondition` with `WaitCondition timed out. Received 0 conditions when expecting 1# after Rollback on failure set to Disabled`.
+=== I encountered a *CREATE_FAILED* error on `DeploymentWaitCondition` that reads `WaitCondition timed out. Received 0 conditions when expecting 1# after Rollback on failure set to Disabled`.
 
 [#DeploymentWaitCondition-timeout]
 .CREATE_FAILED due to DeploymentWaitCondition timed out.
 image::../docs/deployment_guide/images/DeploymentWaitCondition-timeout.png[DeploymentWaitCondition-timeout]
 
-*A.* Go to *Step Functions* > *State machines* > *DeploymentStateMachine*-xxxxxxxxxxxx, drill into the _Failed_ execution, and look for the #Failed# event(s). Click on the *Logs* hyperlink to the CloudWatch log groups and then drill into the log stream whose last event time around the time of the failed event.
+Go to *Step Functions* > *State machines* > *DeploymentStateMachine*-xxxxxxxxxxxx, drill into the _Failed_ execution, and look for the #Failed# event(s). Click on the *Logs* hyperlink to the CloudWatch log groups and then drill into the log stream whose last event time around the time of the failed event.
 
 [#DeploymentStateMachine-Failed-A]
 .State Machines lists *Deployment State Machine* with 1 Failed.
@@ -34,9 +34,9 @@ image::../docs/deployment_guide/images/DeploymentStateMachine-Failed-0.png[Deplo
 .Deployment State Machine lists 1 *Execution* Failed.
 image::../docs/deployment_guide/images/DeploymentStateMachine-Failed-B.png[DeploymentStateMachine-Failed-B]
 
-*Q.* I encountered a *Failed* event at the _Step_ *Check ISE status* or at the _Choice_ *If ISE is up and running* in the deployment state machine for {partner-product-short-name} on AWS.
+=== I encountered a *Failed* event at the _Step_ *Check ISE status* or at the _Choice_ *If ISE is up and running* in the deployment state machine for {partner-product-short-name} on AWS.
 
-*A.* This is due to networking issues. Please verify the existing VPC meets the requirements:
+This is due to networking issues. Please verify the existing VPC meets the requirements:
 
 * The DNS attributes: Ensure both https://docs.aws.amazon.com/vpc/latest/userguide/vpc-dns.html#vpc-dns-support[DNS attributes (enableDnsHostnames and enableDnsSupport) in the VPC^] are enabled.
 * Access to AWS services: The VPC private subnets require either Internet access or https://docs.aws.amazon.com/vpc/latest/privatelink/what-is-privatelink.html[VPC endpoints^]) to reach AWS services, such as S3, SSM and SNS.
