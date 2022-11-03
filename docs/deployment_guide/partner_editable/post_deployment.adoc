@@ -1,43 +1,86 @@
 // Include any postdeployment steps here, such as steps necessary to test that the deployment was successful. If there are no postdeployment steps, leave this file empty.
 
 == Postdeployment steps
-After deployment, you must do the following:
+After deployment, you must complete the following steps.
 
-. Confirm subscription: SNS sends an email with the subject *AWS Notification - Subscription Confirmation* to the email address entered as *EmailSubscription* parameter in the template. Please click the link to confirm subscription to the topic *NotifyAdminTopic* so that SNS can notify you any messages on the topic.
-. Enter Maintenance mode: In order to avoid false alarms and accidentally trigger PAN failover, put the deployment in maintenance by updating the parameter *Maintenance* to `ENABLED`.
-.. Open the https://console.aws.amazon.com/systems-manager/[AWS Systems Manager (SSM) console^].
-.. Select the AWS region where the Partner Solution is created.
-.. In the navigation pane, choose *Parameter Store*. If the AWS Systems Manager home page opens first, choose the menu icon to open the navigation pane, and then choose Parameter Store.
-.. Select the parameter *Maintenance* to drill into its properties.
-.. Click on the *Edit* button in the upper right corner of the page.
-.. In the Value text box, replace the exiting text with `ENABLED`.
-.. Click on the *Save changes* button.
+<<Step 1: Confirm Amazon SNS subscription>>.
 
-. Update *ADMIN_PASSWORD*:
-AWS CloudFormation does not support the ability to store SSM parameters as securestring and, starting from Release 3.2, {partner-product-short-name} requires to reset the admin password after the initial setup. Consequently, you must reset the default admin user's password from the {partner-product-short-name} administrative web console and then manually update the SSM admin password parameter via the AWS cli or console.
-.. Change the password of the {partner-product-short-name} admin user in {partner-product-short-name} adminstrative web console. For detailed instructions, see https://www.cisco.com/c/en/us/td/docs/security/ise/3-2/admin_guide/b_ise_admin_3_2/b_ISE_admin_32_overview.html#concept_7642DD36C0DD424CA423615BF013D0B9[Administrative Access to {partner-product-short-name}^].
-+
-NOTE: For AWS deployments, the initial {partner-product-short-name} admin user name is `admin` in {partner-product-short-name} 3.1 and `iseadmin` in {partner-product-short-name} 3.2.
-+
-.. Update the value of the *ADMIN_PASSWORD* parameter to the new password in the Parameter Store, following the same instructions for the _Maintenance_ parameter.
-+
-TIP: To conform the principle of least privilege, you may create a new {partner-product-short-name} admin user in {partner-product-short-name} administrative web console, assign it to the admin group *ERS_ADMIN*, and replace the values of the SSM parameters *ADMIN_USERNAME* and *ADMIN_PASSWORD* with this new admin user's data.
-+
-. Enable API Gateway for the secondary ISE node: We need this in order to use Lambda to promote SPAN to primary while PPAN is down. For the detailed instructions, see https://developer.cisco.com/docs/identity-services-engine/latest/#!cisco-ise-api-framework/cisco-ise-api-gateway[{partner-product-short-name} API Gateway^].
-. Install the latest patch of the ISE release: In order to get the latest fixes, please update the nodes with the latest patch release. For detailed instructions, see the section Install a New Patch in the corresponding http://cs.co/ise-rn[Release Notes for Cisco Identity Services Engine^].
-. Backup {partner-product-short-name} internal CA chains: This step prepares SPAN to take over PPAN to issue and manage certificates in case that SPAN promoted to primary. https://www.cisco.com/c/en/us/td/docs/security/ise/3-1/admin_guide/b_ise_admin_3_1/b_ISE_admin_31_basic_setup.html#task_E04823B79DCD41EABFAD358D882CE7CA[Export {partner-product-short-name} CA Certificates and Keys^] from the primary ISE node. Then, https://www.cisco.com/c/en/us/td/docs/security/ise/3-1/admin_guide/b_ise_admin_3_1/b_ISE_admin_31_basic_setup.html#task_574F728D24F84475A6099F0D9D3B76B1[Import {partner-product-short-name} CA Certificates and Keys^] into the secondary ISE node.
-. End Maintenance mode: Update the parameter *Maintenance* to `DISABLED`.
+<<Step 2: Enable maintenance mode>>.
 
-.Maintenance
-****
-NOTE: In the future, set the parameter *Maintenance* to `ENABLED` in the AWS Systems Manager's Parameter Store for the region before performing any maintenance. Set it back to `DISABLED` after maintenance.
-****
+<<Step 3: Change the {partner-product-short-name} admin password>>.
 
+<<Step 4: Update the admin password in the Systems Manager console>>.
+
+<<Step 5: Enable Amazon API Gateway for the secondary Cisco ISE node>>.
+<<Step 6: Install the latest ISE release patch>>.
+
+<<Step 7: Backup {partner-product-short-name} internal CA chains>>.
+
+<<Step 8: Disable maintenance mode>>.
+
+
+=== Step 1: Confirm Amazon SNS subscription
+This Partner Solution configures a subscription to an SNS topic called `NotifyAdminTopic`. During deployment, you specify an email address to receive notifications in the `EmailSubscription` template parameter. After deployment, Amazon SNS sends an email with the subject *AWS Notification - Subscription Confirmation* to the specified address. To confirm the subscription, choose *Confirm subscription* in the email.
+
+=== Step 2: Enable maintenance mode
+Before continuing with Steps 2–7, enable maintenance mode to avoid false alarms and accidentally invoking PAN failover.
+
+. Open the https://console.aws.amazon.com/systems-manager/[Systems Manager console^].
+. On the top toolbar, choose AWS Region where the Partner Solution is deployed.
+. In the navigation pane, choose *Parameter Store*.
+. Choose the *Maintenance* parameter.
+. Choose *Edit*.
+. On the *Edit parameter page*, for *Value*, enter `ENABLED`.
+. Choose *Save changes*.
+
+NOTE: After completing Steps 2–7, <<Step 8: Disable maintenance mode, disable maintenance mode>>.
+
+=== Step 3: Change the {partner-product-short-name} admin password
+{partner-product-short-name} 3.2 requires you to reset the admin password after initial setup. After deployment, change the admin password in the {partner-product-short-name} console. For more information, refer to https://www.cisco.com/c/en/us/td/docs/security/ise/3-2/admin_guide/b_ise_admin_3_2/b_ISE_admin_32_overview.html#concept_7642DD36C0DD424CA423615BF013D0B9[Administrative Access to {partner-product-short-name}^].
+
+NOTE: For AWS deployments, initial user names for Cisco ISE 3.1 and 3.2+ are `admin` and `iseadmin`, respectively.
+
+=== Step 4: Update the admin password in the Systems Manager console
+AWS CloudFormation does not support defining template parameters as `SecureString` Systems Manager parameter types. After changing the {partner-product-short-name} admin password, update the `ADMIN_PASSWORD` parameter in Parameter Store with the new password.
+
+. Open the https://console.aws.amazon.com/systems-manager/[Systems Manager console^].
+. On the top toolbar, choose AWS Region where the Partner Solution is deployed.
+. In the navigation pane, choose *Parameter Store*.
+. Choose the *ADMIN_PASSWORD* parameter.
+. Choose *Edit*.
+. On the *Edit parameter page*, for *Value*, enter the {partner-product-short-name} admin password.
+. Choose *Save changes*.
+
+NOTE: You can also edit the parameter using the AWS Command Line Interface (AWS CLI). For more information, refer to https://docs.aws.amazon.com/cli/latest/reference/ssm/put-parameter.html[Put-parameter^].
+
+To conform the principle of least privilege, do the following:
+
+. Create a new {partner-product-short-name} admin in the {partner-product-short-name} console
+. Assign the new admin to the admin group `ERS_ADMIN`.
+. Update the values of the SSM parameters `ADMIN_USERNAME` and `ADMIN_PASSWORD` with the new admin credentials.
+
+=== Step 5: Enable Amazon API Gateway for the secondary Cisco ISE node
+To use AWS Lambda for PAN failover, enable API Gateway for the secondary ISE node. For more information, refer to https://developer.cisco.com/docs/identity-services-engine/latest/#!cisco-ise-api-framework/cisco-ise-api-gateway[{partner-product-short-name} API Gateway^].
+
+=== Step 6: Install the latest ISE release patch
+Update the Cisco ISE nodes with the latest Cisco ISE patch release. For more information, refer to http://cs.co/ise-rn[Release Notes^].
+
+=== Step 7: Backup {partner-product-short-name} internal CA chains
+To prepare the SPAN to issue and manage certificates in the event of failover, complete the following steps:
+
+. https://www.cisco.com/c/en/us/td/docs/security/ise/3-1/admin_guide/b_ise_admin_3_1/b_ISE_admin_31_basic_setup.html#task_E04823B79DCD41EABFAD358D882CE7CA[Export {partner-product-short-name} CA Certificates and Keys^] from the primary ISE node.
+
+. https://www.cisco.com/c/en/us/td/docs/security/ise/3-1/admin_guide/b_ise_admin_3_1/b_ISE_admin_31_basic_setup.html#task_574F728D24F84475A6099F0D9D3B76B1[Import {partner-product-short-name} CA Certificates and Keys^] into the secondary ISE node.
+
+=== Step 8: Disable maintenance mode
+After completing Steps 1-7, disable maintenance mode by resetting the `Maintenance` parameter in Systems Manager to `ENABLED`.
+
+Before performing maintenance in the future, ensure that you repeat the instructions in <<Step 2: Enable maintenance mode, Step 2>> to enable maintenance mode. After maintenance, ensure that you reset the `Maintenance` parameter to `DISABLED`.
 
 == Resources
 * http://cs.co/ise-resources[{partner-product-short-name} & NAC Resources^]
-* http://cs.co/ise-community[{partner-product-short-name} Community^]
-* http://cs.co/ise-webinars[{partner-product-short-name} Webinars^]
-* http://cs.co/ise-videos[{partner-product-short-name} YouTube Channel^]
-* http://cs.co/ise-licensing[{partner-product-short-name} Licensing Guide^]
-* http://cs.co/ise-api[{partner-product-short-name} API SDK^]
+* http://cs.co/ise-community[Network Access Control Cisco Community^]
+* http://cs.co/ise-webinars[Cisco ISE Webinars and Training Videos^]
+* http://cs.co/ise-videos[Cisco ISE - Identity Services Engine on YouTube^]
+* http://cs.co/ise-licensing[Cisco Identity Services Engine Ordering Guide^]
+* http://cs.co/ise-api[Cisco Identity Services Engine API Reference Guide, v1^]

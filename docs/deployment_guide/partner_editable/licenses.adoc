@@ -1,5 +1,10 @@
 // Include details about any licenses and how to sign up. Provide links as appropriate.
 
-There is no cost to use this Partner Solution, but you will be billed for any AWS services or resources that this Partner Solution deploys. For more information, refer to the https://fwd.aws/rA69w?[AWS Quick Start General Information Guide^].
+There is no cost to use this Partner Solution, but you will be billed for any AWS services or resources that this Partner Solution deploys. For more information, refer to the https://fwd.aws/rA69w?[AWS Partner Solutions General Information Guide^].
 
-This Partner Solution comes with a 90-day evaluation license for {partner-product-short-name}. To use {partner-product-short-name} for more than 90 days, you must purchase a VM license for each {partner-product-short-name} instance and endpoint licenses depending on the feature level that is required for intended number of endpoints. For more information, see https://www.cisco.com/c/en/us/products/collateral/security/identity-services-engine/guide-c07-656177.html[{partner-product-short-name} Ordering Guide^].
+This Partner Solution comes with a 90-day evaluation license for {partner-product-short-name}. To use {partner-product-short-name} for more than 90 days, you must purchase the following:
+
+* A virtual machine (VM) license for each {partner-product-short-name} instance.
+* Endpoint licenses, depending on the feature level required for the intended number of endpoints.
+
+For more information, see https://www.cisco.com/c/en/us/products/collateral/security/identity-services-engine/guide-c07-656177.html[{partner-product-name} Ordering Guide^].
