@@ -3,20 +3,21 @@
 == Postdeployment steps
 After deployment, you must complete the following steps.
 
-<<Step 1: Confirm Amazon SNS subscription>>.
+* <<Step 1: Confirm Amazon SNS subscription>>.
 
-<<Step 2: Enable maintenance mode>>.
+* <<Step 2: Enable maintenance mode>>.
 
-<<Step 3: Change the {partner-product-short-name} admin password>>.
+* <<Step 3: Change the {partner-product-short-name} admin password>>.
 
-<<Step 4: Update the admin password in the Systems Manager console>>.
+* <<Step 4: Update the admin password in the Systems Manager console>>.
 
-<<Step 5: Enable Amazon API Gateway for the secondary Cisco ISE node>>.
-<<Step 6: Install the latest ISE release patch>>.
+* <<Step 5: Enable Amazon API Gateway for the secondary Cisco ISE node>>.
 
-<<Step 7: Backup {partner-product-short-name} internal CA chains>>.
+* <<Step 6: Install the latest ISE release patch>>.
 
-<<Step 8: Disable maintenance mode>>.
+* <<Step 7: Backup {partner-product-short-name} internal CA chains>>.
+
+* <<Step 8: Disable maintenance mode>>.
 
 
 === Step 1: Confirm Amazon SNS subscription
