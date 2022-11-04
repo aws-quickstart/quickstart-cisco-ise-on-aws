@@ -13,16 +13,16 @@ As shown in <<architecture1>>, this Partner Solution sets up the following:
 
 * A highly available architecture that spans two Availability Zones.*
 * A virtual private cloud (VPC) configured with public and private subnets, according to AWS best practices, to provide you with your own virtual network on AWS.*
-* In the public subnets, managed NAT gateways for outbound internet access for resources in the private subnets.
+* In the public subnets, managed NAT gateways for outbound internet access for resources in the private subnets.*
 * In the private subnets:
 ** One {partner-product-short-name} primary and one {partner-product-short-name} secondary node deployed to Amazon Elastic Compute Cloud (Amazon EC2) instances.
 ** A Network Load Balancer attached to the private subnets. The load balancer distributes Remote Authentication Dial-In User Service (RADIUS) and Terminal Access Controller Access-Control System Plus (TACACS+) requests among {partner-product-short-name} nodes.
 * Amazon Route 53 for Domain Name Service (DNS) resolution between {partner-product-short-name} instances.
 * AWS Lambda for health checks, deployment, and failover of {partner-product-short-name} instances.
 * AWS Step Functions for state machines to deploy and manage failover of {partner-product-short-name} instances.
-* Parameter Store, a capability of AWS Systems Manager, for storing state information about {partner-product-short-name} instances.
+* AWS Systems Manager for storing state information about {partner-product-short-name} nodes.
 * Amazon CloudWatch for logging and generating events about {partner-product-short-name} instances.
-* Amazon EventBridge for rules to invoke Step Function state machines.
+* Amazon EventBridge for rules to invoke Step Functions state machines.
 * Amazon Simple Notification Service (Amazon SNS) to manage subscriptions to deployment, health check, and failover email notifications.
 
 [.small]#* The template that deploys this Partner Solution into an existing VPC skips the components marked by asterisks and prompts you for your existing VPC configuration.#
