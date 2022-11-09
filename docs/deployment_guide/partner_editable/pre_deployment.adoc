@@ -2,6 +2,5 @@
 
 == Predeployment steps
 
-=== AWS Marketplace
-Subscribe to {marketplace_listing_url}[{partner-product-name} in AWS Marketplace^].
+In the AWS Marketplace, subscribe to the https://aws.amazon.com/marketplace/pp/prodview-uvsybra7r3iug[{partner-product-name} AMI^].
 
