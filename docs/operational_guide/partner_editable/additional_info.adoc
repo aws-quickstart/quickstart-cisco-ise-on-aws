@@ -6,7 +6,7 @@ As shown in <<architecture2>>, this Partner Solution includes a deployment state
 
 [#architecture2]
 .Deployment state machine architecture for {partner-product-short-name} on AWS
-image::../docs/operational_guide/images/quickstart-cisco-ise-on-aws-architecture-DeploymentStateMachine.png[DeploymentStateMachineArchitecture]
+image::../images/quickstart-cisco-ise-on-aws-architecture-DeploymentStateMachine.png[DeploymentStateMachineArchitecture]
 
 The deployment state machine performs the following functions:
 
