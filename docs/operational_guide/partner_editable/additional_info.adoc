@@ -54,3 +54,4 @@ This Partner Solution stores the following configurable parameters in https://do
 |`Secondary_IP` |IPv4 address of SPAN.
 |`SyncStatus` |Latest synchronization status of the {partner-product-short-name} deployment from the last health check.
 |===
+
