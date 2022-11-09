@@ -6,7 +6,7 @@ As shown in <<architecture2>>, this Partner Solution includes a deployment state
 
 [#architecture2]
 .Deployment state machine architecture for {partner-product-short-name} on AWS
-image::../docs/operational_guide/images/quickstart-cisco-ise-on-aws-architecture-DeploymentStateMachine.png[DeploymentStateMachineArchitecture]
+image::docs/operational_guide/images/quickstart-cisco-ise-on-aws-architecture-DeploymentStateMachine.png[DeploymentStateMachineArchitecture][DeploymentStateMachineArchitecture]
 
 The deployment state machine performs the following functions:
 
@@ -23,7 +23,7 @@ As shown in <<architecture3>>, this Partner Solution deploys a failover state ma
 
 [#architecture3]
 .Failover state machine architecture for {partner-product-short-name} on AWS
-image::../docs/operational_guide/images/quickstart-cisco-ise-on-aws-architecture-FailoverStateMachine.png[FailoverStateMachineArchitecture]
+image::docs/operational_guide/images/quickstart-cisco-ise-on-aws-architecture-FailoverStateMachine.png[FailoverStateMachineArchitecture]
 
 Failover keeps access to the Cisco web console open and enables certain aspects of {partner-product-short-name} to continue running. The failover state machine performs the following functions:
 
