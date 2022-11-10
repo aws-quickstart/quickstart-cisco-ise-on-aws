@@ -984,7 +984,7 @@ AWS Cloud.</p>
 <p>In the public subnets, managed NAT gateways for outbound internet access for resources in the private subnets.*</p>
 </li>
 <li>
-<p>In the private subnets:</p>
+<p>In the private subnets:*</p>
 <div class="ulist">
 <ul>
 <li>
@@ -1060,8 +1060,15 @@ For more information about deployment and failover state machines and state pers
 <div class="sect1">
 <h2 id="_predeployment_steps">Predeployment steps</h2>
 <div class="sectionbody">
-<div class="paragraph">
+<div class="ulist">
+<ul>
+<li>
 <p>In the AWS Marketplace, subscribe to the <a href="https://aws.amazon.com/marketplace/pp/prodview-uvsybra7r3iug" target="_blank" rel="noopener">Cisco Identity Services Engine AMI</a>.</p>
+</li>
+<li>
+<p>Create one Amazon EC2 key pair or ensure that at least one exists in your AWS account in the Region where you plan to deploy Cisco ISE. Make note of the key pair name. For more information, refer to <a href="https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-console-create-keypair.html" target="_blank" rel="noopener">Creating an EC2 key pair</a>.</p>
+</li>
+</ul>
 </div>
 </div>
 </div>

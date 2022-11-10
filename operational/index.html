@@ -914,13 +914,13 @@ Visit our <a href="https://github.com/aws-quickstart/quickstart-cisco-ise-on-aws
 <h2 id="_deployment_state_machine">Deployment state machine</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>As shown in <a href="#architecture2">Figure 1</a>, this Partner Solution includes a deployment state machine to form a two-node Cisco ISO deployment.</p>
+<p>As shown in <a href="#architecture2">Figure 1</a>, this Partner Solution includes a deployment state machine to form a two-node Cisco ISE deployment.</p>
 </div>
 <div id="architecture2" class="imageblock">
 <div class="content">
 <img src="https://aws-quickstart.github.io/quickstart-cisco-ise-on-aws/docs/operational_guide/images/quickstart-cisco-ise-on-aws-architecture-DeploymentStateMachine.png" alt="DeploymentStateMachineArchitecture">
 </div>
-<div class="title">Figure 1. Deployment state machine architecture for Cisco ISO on AWS</div>
+<div class="title">Figure 1. Deployment state machine architecture for Cisco ISE on AWS</div>
 </div>
 <div class="paragraph">
 <p>The deployment state machine performs the following functions:</p>
@@ -928,13 +928,13 @@ Visit our <a href="https://github.com/aws-quickstart/quickstart-cisco-ise-on-aws
 <div class="olist arabic">
 <ol class="arabic">
 <li>
-<p>Checks Cisco ISO status to verify that both Cisco ISO instances are up and ready.</p>
+<p>Checks Cisco ISE status to verify that both Cisco ISE instances are up and ready.</p>
 </li>
 <li>
-<p>Sets the first Cisco ISO instance as the primary administrator node (primary PAN or PPAN) of a new Cisco ISO deployment.</p>
+<p>Sets the first Cisco ISE instance as the primary administrator node (primary PAN or PPAN) of a new Cisco ISE deployment.</p>
 </li>
 <li>
-<p>Registers the second Cisco ISO instance as the secondary administrator node (secondary PAN or SPAN) in the same Cisco ISO deployment.</p>
+<p>Registers the second Cisco ISE instance as the secondary administrator node (secondary PAN or SPAN) in the same Cisco ISE deployment.</p>
 </li>
 <li>
 <p>Checks the deployment sync status to verify that both nodes are synchronized.</p>
@@ -965,10 +965,10 @@ CloudFormation deploys the state machine architecture towards the end of the sta
 <div class="content">
 <img src="https://aws-quickstart.github.io/quickstart-cisco-ise-on-aws/docs/operational_guide/images/quickstart-cisco-ise-on-aws-architecture-FailoverStateMachine.png" alt="FailoverStateMachineArchitecture">
 </div>
-<div class="title">Figure 2. Failover state machine architecture for Cisco ISO on AWS</div>
+<div class="title">Figure 2. Failover state machine architecture for Cisco ISE on AWS</div>
 </div>
 <div class="paragraph">
-<p>Failover keeps access to the Cisco web console open and enables certain aspects of Cisco ISO to continue running. The failover state machine performs the following functions:</p>
+<p>Failover keeps access to the Cisco web console open and enables certain aspects of Cisco ISE to continue running. The failover state machine performs the following functions:</p>
 </div>
 <div class="olist arabic">
 <ol class="arabic">
@@ -1001,7 +1001,7 @@ CloudFormation deploys the state machine architecture towards the end of the sta
 <i class="fa icon-note" title="Note"></i>
 </td>
 <td class="content">
-The deployment sets <code>AutoFailover</code> to <code>DISABLED</code> by default in the templates for two reasons. First, the Partner Solution only deploys two Cisco ISO nodes. Second, auto failover can result in a 30-minute downtime while services are restarted.
+The deployment sets <code>AutoFailover</code> to <code>DISABLED</code> by default in the templates for two reasons. First, the Partner Solution only deploys two Cisco ISE nodes. Second, auto failover can result in a 30-minute downtime while services are restarted.
 </td>
 </tr>
 </table>
@@ -1028,11 +1028,11 @@ The deployment sets <code>AutoFailover</code> to <code>DISABLED</code> by defaul
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>ADMIN_PASSWORD</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Cisco ISO admin password used by Lambda for Extensible RESTful Services (ERS)/OpenAPI requests.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cisco ISE admin password used by Lambda for Extensible RESTful Services (ERS)/OpenAPI requests.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>ADMIN_USERNAME</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Cisco ISO admin user name used by Lambda for ERS/OpenAPI requests.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Cisco ISE admin user name used by Lambda for ERS/OpenAPI requests.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>Maintenance</code></p></td>
@@ -1056,7 +1056,7 @@ The deployment sets <code>AutoFailover</code> to <code>DISABLED</code> by defaul
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>SyncStatus</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Latest synchronization status of the Cisco ISO deployment from the last health check.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Latest synchronization status of the Cisco ISE deployment from the last health check.</p></td>
 </tr>
 </tbody>
 </table>
