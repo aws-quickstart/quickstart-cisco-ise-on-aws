@@ -1,7 +1,7 @@
 :partner-solution-project-name: quickstart-cisco-ise-on-aws
 :partner-solution-github-org: aws-quickstart
 :partner-product-name: Cisco Identity Services Engine
-:partner-product-short-name: Cisco ISO
+:partner-product-short-name: Cisco ISE
 :partner-company-name: Cisco Systems Inc.
 :doc-month: November
 :doc-year: 2022
