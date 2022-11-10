@@ -2,5 +2,5 @@
 
 == Predeployment steps
 
-In the AWS Marketplace, subscribe to the https://aws.amazon.com/marketplace/pp/prodview-uvsybra7r3iug[{partner-product-name} AMI^].
-
+* In the AWS Marketplace, subscribe to the https://aws.amazon.com/marketplace/pp/prodview-uvsybra7r3iug[{partner-product-name} AMI^].
+* Create one Amazon EC2 key pair or ensure that at least one exists in your AWS account in the Region where you plan to deploy {partner-product-short-name}. Make note of the key pair name. For more information, refer to https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-console-create-keypair.html[Creating an EC2 key pair^].
