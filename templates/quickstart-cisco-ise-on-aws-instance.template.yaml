@@ -687,6 +687,9 @@ Mappings:
     af-south-1:
       BYOL31: ami-003d33a44238d468e
       BYOL32: ami-08164edf9ea98e66e
+    me-central-1:
+      BYOL31: ami-023f6853b95edc0d7
+      BYOL32: ami-0889e9152037cb637 
   ISEVersionMap:
     '3.1': 
       Code: BYOL31
