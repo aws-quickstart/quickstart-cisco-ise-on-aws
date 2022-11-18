@@ -617,76 +617,79 @@ Mappings:
   CiscoISEAMI:
     us-east-1:
       BYOL31: ami-0bb0a9d243824a077
-      BYOL32: ami-01e6aa56e485c9a62
+      BYOL32: ami-08c545c5ef3cacced
     us-east-2:
       BYOL31: ami-0262130ee7b27f122
-      BYOL32: ami-0ce49f498c7d91933
+      BYOL32: ami-068b6e34ad1266819
     us-west-1:
       BYOL31: ami-0965fef2e601ad4d0
-      BYOL32: ami-0c59bbc144f97a440
+      BYOL32: ami-0768dd8e82836d887
     us-west-2:
       BYOL31: ami-0ffd69a117dbcbb9e
-      BYOL32: ami-07a5e2c6fe4601683
+      BYOL32: ami-0531d829a9e4d6b83
     ca-central-1:
       BYOL31: ami-0715d661908b3c937
-      BYOL32: ami-02dbeb1bfe7294d4f
+      BYOL32: ami-0d440428a5401cd3e
     eu-central-1:
       BYOL31: ami-0526fe132f57b4dd5
-      BYOL32: ami-08182506560cd424e
+      BYOL32: ami-0959760bb044c3247
     eu-west-1:
       BYOL31: ami-0c0078c6bc939b794
-      BYOL32: ami-077da8c0b26717a4a
+      BYOL32: ami-0c3b9a181c1c91a3a
     eu-west-2:
       BYOL31: ami-0a0e17dd5fa1643e9
-      BYOL32: ami-07f59dc33603cc9a3
+      BYOL32: ami-00e0b109d715904ad
     eu-west-3:
       BYOL31: ami-0f766d122c0b5c7b1
-      BYOL32: ami-0b436170de0cb85bd
+      BYOL32: ami-04dee19d63c2edb18
     eu-north-1:
       BYOL31: ami-06d5092c5d2de909d
-      BYOL32: ami-0707cee299c018554
+      BYOL32: ami-00e9fa9b6e9bcec20
     eu-south-1:
       BYOL31: ami-0941a499217ec268e
-      BYOL32: ami-0948f9e67d0ddac78
+      BYOL32: ami-060ed864daf36bcac
     ap-southeast-1:
       BYOL31: ami-0214a475ff692424f
-      BYOL32: ami-0a89fe984bc7a1e0c
+      BYOL32: ami-02bb8125b423c29dc
     ap-southeast-2:
       BYOL31: ami-0f1846c9d911d1727
-      BYOL32: ami-0cce8c1aad774fafe
+      BYOL32: ami-0f238188265b7f80b
     ap-southeast-3:
       BYOL31: ami-0a824feea34fe65fb
-      BYOL32: ami-0dc784aaa6ab4adf7
+      BYOL32: ami-0da7b907b79029925
     ap-south-1:
       BYOL31: ami-0add11be4e3a2b72e
-      BYOL32: ami-00f3d62f6a919bec4
+      BYOL32: ami-05ef3254c75ce4053
     ap-northeast-1:
       BYOL31: ami-0da69493a00c3ebb1
-      BYOL32: ami-0f124e1639d48bef6
+      BYOL32: ami-07a8db1bcd9d807a7
     ap-northeast-2:
       BYOL31: ami-0a56667a39f884c9e
-      BYOL32: ami-04cde5928da511012
-    ap-east-1: 
+      BYOL32: ami-032bcdac0d576df35
+    ap-east-1:
       BYOL31: ami-0118aa54aed56f415
-      BYOL32: ami-012f0034676b93eee
+      BYOL32: ami-0e401f651fbb61c1d
     me-south-1:
       BYOL31: ami-0a2f4b9a138b52221
-      BYOL32: ami-02fd23233b8128324
+      BYOL32: ami-0c8012fd684bdfbb5
     ap-northeast-3:
       BYOL31: ami-05d2412cb877a373f
-      BYOL32: ami-08c602e952f4d2322
+      BYOL32: ami-0d6ab22fd8ac904a3
     sa-east-1:
       BYOL31: ami-0feeceb6d1a0dd691
-      BYOL32: ami-0eca5100e6a1a3733
+      BYOL32: ami-0c1b6e1fb53940d10
     us-gov-west-1:
       BYOL31: ami-0692c2574536577a7
-      BYOL32: ami-01a6afd8a2fdab6f7
+      BYOL32: ami-0245b2414c12ac588
     us-gov-east-1:
       BYOL31: ami-0cf29ff16a189964b
-      BYOL32: ami-0e2bb0825833acb30
+      BYOL32: ami-03594105967b59456
     af-south-1:
       BYOL31: ami-003d33a44238d468e
-      BYOL32: ami-0fb22f27d6f56591e
+      BYOL32: ami-08164edf9ea98e66e
+    me-central-1:
+      BYOL31: ami-023f6853b95edc0d7
+      BYOL32: ami-0889e9152037cb637 
   ISEVersionMap:
     '3.1': 
       Code: BYOL31
@@ -1584,7 +1587,7 @@ Resources:
                   ],
                   "BackoffRate": 1,
                   "IntervalSeconds": 240,
-                  "MaxAttempts": 5
+                  "MaxAttempts": 7
                 }
               ],
               "Catch": [
@@ -1736,7 +1739,7 @@ Resources:
             ssm_client = boto3.client('ssm',region_name=runtime_region)
             timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
             try:
-                retries = 5 #Polling rate to restrict Step functions looping
+                retries = 10 #Polling rate to restrict Step functions looping
                 if "taskresult" in event:
                     retries = int(event['taskresult']['retries'])
                 else:
