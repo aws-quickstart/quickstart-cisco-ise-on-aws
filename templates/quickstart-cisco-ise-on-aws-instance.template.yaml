@@ -1340,6 +1340,7 @@ Resources:
       Region: !Ref AWS::Region
       LayerName: CiscoISElayer
       Packages:
+        - boto3
         - requests
 
   # Set up ISE Deployment resources
@@ -1706,6 +1707,8 @@ Resources:
           import sys
           import os
           import socket
+          import urllib3
+          urllib3.disable_warnings()
 
           logging.basicConfig(stream = sys.stdout)
           logger = logging.getLogger()
@@ -1869,6 +1872,8 @@ Resources:
           import boto3
           import sys
           import os
+          import urllib3
+          urllib3.disable_warnings()
 
 
           logging.basicConfig(stream = sys.stdout)
@@ -1993,6 +1998,8 @@ Resources:
           import boto3
           import sys
           import os
+          import urllib3
+          urllib3.disable_warnings()
 
 
           logging.basicConfig(stream = sys.stdout)
@@ -2134,6 +2141,8 @@ Resources:
           import boto3
           import sys
           import os
+          import urllib3
+          urllib3.disable_warnings()
 
           logging.basicConfig(stream = sys.stdout)
           logger = logging.getLogger()
@@ -2613,6 +2622,8 @@ Resources:
           logging.basicConfig(stream = sys.stdout)
           logger = logging.getLogger()
           logger.setLevel(logging.INFO)
+          import urllib3
+          urllib3.disable_warnings()
 
           def handler(event, context):
               def get_ssm_parameter(ssm_client, ssm_parameter_name, WithDecryption=False):
@@ -2921,6 +2932,8 @@ Resources:
           import boto3
           import sys
           import os
+          import urllib3
+          urllib3.disable_warnings()
 
           logging.basicConfig(stream = sys.stdout)
           logger = logging.getLogger()
@@ -3065,6 +3078,8 @@ Resources:
           import boto3
           import sys
           import os
+          import urllib3
+          urllib3.disable_warnings()
 
           logging.basicConfig(stream = sys.stdout)
           logger = logging.getLogger()
@@ -3209,6 +3224,8 @@ Resources:
           import boto3
           import sys
           import os
+          import urllib3
+          urllib3.disable_warnings()
 
           logging.basicConfig(stream = sys.stdout)
           logger = logging.getLogger()
@@ -3347,6 +3364,8 @@ Resources:
           import boto3
           import sys
           import os
+          import urllib3
+          urllib3.disable_warnings()
 
           logging.basicConfig(stream = sys.stdout)
           logger = logging.getLogger()
