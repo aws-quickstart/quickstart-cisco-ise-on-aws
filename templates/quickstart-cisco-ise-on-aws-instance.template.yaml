@@ -54,6 +54,7 @@ Parameters:
     AllowedValues:
       - '3.1'
       - '3.2'
+      - '3.3'
     Default: '3.1'
   EBSEncrypt:
     Description: Choose true to enable EBS encryption.
@@ -618,94 +619,124 @@ Mappings:
     us-east-1:
       BYOL31: ami-0bb0a9d243824a077
       BYOL32: ami-08c545c5ef3cacced
+      BYOL33: ami-0b23511ddfe2744e2
     us-east-2:
       BYOL31: ami-0262130ee7b27f122
       BYOL32: ami-068b6e34ad1266819
+      BYOL33: ami-07bc77592aa26607e
     us-west-1:
       BYOL31: ami-0965fef2e601ad4d0
       BYOL32: ami-0768dd8e82836d887
+      BYOL33: ami-0c6108f8e0494c81a
     us-west-2:
       BYOL31: ami-0ffd69a117dbcbb9e
       BYOL32: ami-0531d829a9e4d6b83
+      BYOL33: ami-0944cc49bd9c49681
     ca-central-1:
       BYOL31: ami-0715d661908b3c937
       BYOL32: ami-0d440428a5401cd3e
+      BYOL33: ami-04c7ccc68bf2544ff
     eu-central-1:
       BYOL31: ami-0526fe132f57b4dd5
       BYOL32: ami-0959760bb044c3247
+      BYOL33: ami-049d026e31f08279c
     eu-west-1:
       BYOL31: ami-0c0078c6bc939b794
       BYOL32: ami-0c3b9a181c1c91a3a
+      BYOL33: ami-0f1d929fc7cf03199
     eu-west-2:
       BYOL31: ami-0a0e17dd5fa1643e9
       BYOL32: ami-00e0b109d715904ad
+      BYOL33: ami-0b5146dc1129aa7b9
     eu-west-3:
       BYOL31: ami-0f766d122c0b5c7b1
       BYOL32: ami-04dee19d63c2edb18
+      BYOL33: ami-0483c024c7e731b9e
     eu-north-1:
       BYOL31: ami-06d5092c5d2de909d
       BYOL32: ami-00e9fa9b6e9bcec20
+      BYOL33: ami-0c7ca7c09e252a93b
     eu-south-1:
       BYOL31: ami-0941a499217ec268e
       BYOL32: ami-060ed864daf36bcac
+      BYOL33: ami-0d2b7e3a5df8a5197
     eu-south-2:
       BYOL31: ami-006a07d274fcaffac
       BYOL32: ami-0b433a7587fea7e41
+      BYOL33: ami-081444bce937f7c9b
     ap-southeast-1:
       BYOL31: ami-0214a475ff692424f
       BYOL32: ami-02bb8125b423c29dc
+      BYOL33: ami-0f4814f9ae2583a15
     ap-southeast-2:
       BYOL31: ami-0f1846c9d911d1727
       BYOL32: ami-0f238188265b7f80b
+      BYOL33: ami-02027215ea0072c8f
     ap-southeast-3:
       BYOL31: ami-0a824feea34fe65fb
       BYOL32: ami-0da7b907b79029925
+      BYOL33: ami-0f936b043bc6b482d
     ap-southeast-4:
       BYOL31: ami-06a6a3b37cf23c6e7
       BYOL32: ami-0ea8a008eea59002f
+      BYOL33: ami-0383b709504b87155
     ap-south-1:
       BYOL31: ami-0add11be4e3a2b72e
       BYOL32: ami-05ef3254c75ce4053
+      BYOL33: ami-0aadef45f85ef1b7b
     ap-south-2:
       BYOL31: ami-09896c9d9eeed3138
       BYOL32: ami-0448864ec746d003a
+      BYOL33: ami-04186583d88f91bf3
     ap-northeast-1:
       BYOL31: ami-0da69493a00c3ebb1
       BYOL32: ami-07a8db1bcd9d807a7
+      BYOL33: ami-05a21a97c3a5939ab
     ap-northeast-2:
       BYOL31: ami-0a56667a39f884c9e
       BYOL32: ami-032bcdac0d576df35
+      BYOL33: ami-0ce3292a83e3e0dcb
     ap-east-1:
       BYOL31: ami-0118aa54aed56f415
       BYOL32: ami-0e401f651fbb61c1d
+      BYOL33: ami-0778f4d43c1ecac49
     me-south-1:
       BYOL31: ami-0a2f4b9a138b52221
       BYOL32: ami-0c8012fd684bdfbb5
+      BYOL33: ami-0ad2060a705b74100
     ap-northeast-3:
       BYOL31: ami-05d2412cb877a373f
       BYOL32: ami-0d6ab22fd8ac904a3
+      BYOL33: ami-0cb4882d88690e63d
     sa-east-1:
       BYOL31: ami-0feeceb6d1a0dd691
       BYOL32: ami-0c1b6e1fb53940d10
+      BYOL33: ami-0d8c1eb49a17cd4d3
     us-gov-west-1:
       BYOL31: ami-0692c2574536577a7
       BYOL32: ami-0245b2414c12ac588
+      BYOL33: ami-048a087b1d0622685
     us-gov-east-1:
       BYOL31: ami-0cf29ff16a189964b
       BYOL32: ami-03594105967b59456
+      BYOL33: ami-00e50ac7c4253b34c
     af-south-1:
       BYOL31: ami-003d33a44238d468e
       BYOL32: ami-08164edf9ea98e66e
+      BYOL33: ami-0e0656268b8ffd19e
     me-central-1:
       BYOL31: ami-023f6853b95edc0d7
       BYOL32: ami-0889e9152037cb637 
+      BYOL33: ami-02775edd7f0c60278
   ISEVersionMap:
     '3.1': 
       Code: BYOL31
     '3.2':
       Code: BYOL32
+    '3.3':
+      Code: BYOL33
 Conditions:
-  IsISE32Condition: !Equals [!Ref ISEVersion, '3.2' ]
+  IsISE32Condition: !Or [!Equals [!Ref ISEVersion, '3.2' ], !Equals [!Ref ISEVersion, '3.3' ]]
 Resources:
   ISESecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
